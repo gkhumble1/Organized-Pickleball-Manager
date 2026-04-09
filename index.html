@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pickleball Rotation Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="light-mode">
+  <header class="app-header">
+    <div class="app-title">
+      <h1>Pickleball Rotation Manager</h1>
+      <p>3 courts · up to 20 players · fair rotation · wins & losses tracking</p>
+    </div>
+    <button id="themeToggle" class="icon-button" title="Toggle light/dark mode">
+      <span id="themeIcon">🌞</span>
+    </button>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: Players & Controls -->
+    <section class="panel panel-left">
+      <h2>Players</h2>
+      <p class="panel-subtitle">Fixed numbers · names saved · stats tracked</p>
+
+      <div class="players-header-row">
+        <span>#</span>
+        <span>Name</span>
+        <span>Active</span>
+      </div>
+      <div id="playersList" class="players-list"></div>
+
+      <div class="panel-actions">
+        <button id="randomizeOrderBtn">Randomize Starting Order</button>
+        <button id="resetSessionBtn" class="secondary">Reset Session (keep names)</button>
+        <button id="resetAllBtn" class="danger">Reset Everything</button>
+      </div>
+
+      <h3>Stats</h3>
+      <div class="stats-table-wrapper">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>G</th>
+              <th>Rest</th>
+              <th>W</th>
+              <th>L</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="statsTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CENTER: Courts & Timer -->
+    <section class="panel panel-center">
+      <div class="panel-header-row">
+        <h2>Courts</h2>
+        <button id="nextRoundBtn">Generate Next Round</button>
+      </div>
+      <p class="panel-subtitle">Max 3 courts · auto-adjust based on active players</p>
+
+      <div id="courtsContainer" class="courts-container"></div>
+
+      <div class="timer-section">
+        <h3>Round Timer</h3>
+        <div class="timer-controls">
+          <select id="timerDuration">
+            <option value="10">10 minutes</option>
+            <option value="12">12 minutes</option>
+            <option value="15" selected>15 minutes</option>
+          </select>
+          <span id="timerDisplay">15:00</span>
+          <button id="startTimerBtn">Start</button>
+          <button id="pauseTimerBtn">Pause</button>
+          <button id="resetTimerBtn" class="secondary">Reset</button>
+        </div>
+      </div>
+
+      <div class="round-actions">
+        <button id="recordResultsBtn" class="primary">Record Round Results</button>
+        <button id="undoBtn" class="secondary">Undo Last Round</button>
+      </div>
+    </section>
+
+    <!-- RIGHT: Insights & Details -->
+    <section class="panel panel-right">
+      <h2>Session Insights</h2>
+
+      <div class="summary-card">
+        <h3>Session Summary</h3>
+        <ul id="sessionSummary" class="summary-list"></ul>
+      </div>
+
+      <div class="summary-card">
+        <h3>Needs to Play Next</h3>
+        <ul id="needsToPlayList" class="summary-list"></ul>
+      </div>
+
+      <div class="summary-card">
+        <h3>Player Details</h3>
+        <p class="panel-subtitle">Click a player row in the stats table to view details.</p>
+        <div id="playerDetails" class="player-details">
+          <p>No player selected.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Record Round Results -->
+  <div id="resultsModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Record Round Results</h2>
+        <button id="closeResultsModal" class="icon-button">✕</button>
+      </div>
+      <div id="resultsModalBody" class="modal-body"></div>
+      <div class="modal-footer">
+        <button id="saveResultsBtn" class="primary">Save Results</button>
+        <button id="cancelResultsBtn" class="secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Wins/Losses -->
+  <div id="editWLModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Wins & Losses</h2>
+        <button id="closeEditWLModal" class="icon-button">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="editWLPlayerName"></p>
+        <label>
+          Wins:
+          <input type="number" id="editWinsInput" min="0" />
+        </label>
+        <label>
+          Losses:
+          <input type="number" id="editLossesInput" min="0" />
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button id="saveWLBtn" class="primary">Save</button>
+        <button id="cancelWLBtn" class="secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
