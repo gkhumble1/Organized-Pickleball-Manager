@@ -415,19 +415,16 @@ function saveWL() {
 
 function openResultsModal() {
   const modal = $("resultsModal");
-  const body = $("resultsModalBody");
-  if (!modal || !body) return;
+  const select = $("winnerTeamSelect");
+  const container = $("courtResultsContainer");
+
+  if (!modal || !select || !container) return;
 
   // Clear old content
-  body.innerHTML = "";
+  select.innerHTML = "";
+  container.innerHTML = "";
 
-  // Build a simple select for winners
-  const label = document.createElement("label");
-  label.textContent = "Which team won this round?";
-
-  const select = document.createElement("select");
-  select.id = "winnerTeamSelect";
-
+  // Build options for each court/team
   courts.forEach((court, index) => {
     const opt1 = document.createElement("option");
     opt1.value = `court${index}-team1`;
@@ -438,10 +435,23 @@ function openResultsModal() {
     opt2.value = `court${index}-team2`;
     opt2.textContent = `Court ${index + 1} - Team 2`;
     select.appendChild(opt2);
-  });
 
-  label.appendChild(select);
-  body.appendChild(label);
+    // Display court teams inside modal
+    const courtDiv = document.createElement("div");
+    courtDiv.className = "court-result-block";
+
+    courtDiv.innerHTML = `
+      <h4>Court ${index + 1}</h4>
+      <p><strong>Team 1:</strong> ${
+        court.team1.map(id => players.find(p => p.id === id).name).join(", ")
+      }</p>
+      <p><strong>Team 2:</strong> ${
+        court.team2.map(id => players.find(p => p.id === id).name).join(", ")
+      }</p>
+    `;
+
+    container.appendChild(courtDiv);
+  });
 
   modal.classList.remove("hidden");
 }
