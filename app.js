@@ -850,3 +850,17 @@ document.getElementById("savePlayersBtn").addEventListener("click", async () => 
 
     alert("Players saved! The roster will update in a few seconds.");
 });
+
+document.getElementById("loadPlayersBtn").addEventListener("click", async () => {
+    const response = await fetch("players.json");
+    const data = await response.json();
+
+    const players = data.players || [];
+
+    document.querySelectorAll(".player-name").forEach((input, index) => {
+        input.value = players[index] || "";
+    });
+
+    alert("Saved players loaded!");
+});
+
