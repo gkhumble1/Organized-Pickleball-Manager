@@ -831,15 +831,6 @@ window.addEventListener("DOMContentLoaded", () => {
   $("timerDuration").addEventListener("change", resetTimer);
 });
 
-document.getElementById("savePlayersBtn").addEventListener("click", async () => {
-    const players = [];
-
-    document.querySelectorAll(".player-name").forEach(input => {
-        if (input.value.trim() !== "") {
-            players.push(input.value.trim());
-        }
-    });
-
     document.getElementById("savePlayersBtn").addEventListener("click", async () => {
     const players = [];
 
