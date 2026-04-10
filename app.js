@@ -502,6 +502,128 @@ document.getElementById("loadPlayersBtn").addEventListener("click", async () => 
   alert("Saved players loaded!");
 });
 
+// --- Save Roster As… -------------------------------------------------------
+
+document.getElementById("saveRosterBtn").addEventListener("click", async () => {
+  const rosterName = $("rosterNameInput").value.trim();
+  if (!rosterName) {
+    alert("Please enter a roster name.");
+    return;
+  }
+
+  const rosterData = {
+    players: players.map((p) => ({
+      name: p.name,
+      seasonGames: p.seasonGames || 0,
+      seasonWins: p.seasonWins || 0,
+      seasonLosses: p.seasonLosses || 0,
+      seasonPartners: p.seasonPartners || {},
+      seasonOpponents: p.seasonOpponents || {}
+    }))
+  };
+
+  await fetch(
+    "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/save-roster.yml/dispatches",
+    {
+      method: "POST",
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ref: "main",
+        inputs: {
+          roster_name: rosterName,
+          roster_json: JSON.stringify(rosterData)
+        }
+      }),
+    }
+  );
+
+  alert("Roster saved! It will appear in .rosters shortly.");
+});
+
+// --- Load Roster -----------------------------------------------------------
+
+document.getElementById("loadRosterBtn").addEventListener("click", async () => {
+  const rosterName = $("rosterNameInput").value.trim();
+  if (!rosterName) {
+    alert("Please enter a roster name.");
+    return;
+  }
+
+  const filePath = `.rosters/${rosterName}.json`;
+
+  try {
+    const response = await fetch(filePath);
+    if (!response.ok) {
+      alert("Roster not found.");
+      return;
+    }
+
+    const data = await response.json();
+
+    players.forEach((p, i) => {
+      const saved = data.players[i];
+      if (saved) {
+        p.name = saved.name;
+        p.seasonGames = saved.seasonGames || 0;
+        p.seasonWins = saved.seasonWins || 0;
+        p.seasonLosses = saved.seasonLosses || 0;
+        p.seasonPartners = saved.seasonPartners || {};
+        p.seasonOpponents = saved.seasonOpponents || {};
+      } else {
+        p.name = "";
+      }
+
+      // Reset daily stats (your requirement)
+      p.games = 0;
+      p.wins = 0;
+      p.losses = 0;
+      p.rest = 0;
+      p.partners = {};
+      p.opponents = {};
+    });
+
+    saveState();
+    renderPlayersList();
+    renderStatsTable();
+    renderSummary();
+    renderNeedsToPlay();
+
+    alert("Roster loaded! Daily stats reset for a new session.");
+  } catch (err) {
+    alert("Error loading roster.");
+  }
+});
+
+// --- Delete Roster ---------------------------------------------------------
+
+document.getElementById("deleteRosterBtn").addEventListener("click", async () => {
+  const rosterName = $("rosterNameInput").value.trim();
+  if (!rosterName) {
+    alert("Please enter a roster name.");
+    return;
+  }
+
+  await fetch(
+    "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/delete-roster.yml/dispatches",
+    {
+      method: "POST",
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ref: "main",
+        inputs: { roster_name: rosterName }
+      }),
+    }
+  );
+
+  alert("Roster deleted (if it existed).");
+});
+
 // --- Init ------------------------------------------------------------------
 
 window.addEventListener("DOMContentLoaded", () => {
