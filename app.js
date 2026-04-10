@@ -126,6 +126,48 @@ function loadRosterFromSelect() {
     alert("Please select a roster first.");
     return;
   }
+  function applySeasonSnapshot(snapshot) {
+  if (!snapshot || !snapshot.players) {
+    alert("Cloud season file is missing or invalid.");
+    return;
+  }
+
+  // Apply season stats to each player
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    const snap = snapshot.players[i];
+
+    if (!snap) continue;
+
+    // Season stats
+    p.name = snap.name || "";
+    p.games = snap.games || 0;
+    p.wins = snap.wins || 0;
+    p.losses = snap.losses || 0;
+
+    // Reset session stats
+    p.rest = 0;
+    p.partners = {};
+    p.opponents = {};
+  }
+
+  // Reset session-wide state
+  courts = [];
+  historyStack = [];
+  currentRoundId = 0;
+
+  // Save + re-render everything
+  saveState();
+  renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+
+  $("playerDetails").innerHTML = "<p>No player selected.</p>";
+
+  alert("Season stats loaded from cloud.");
+}
 
   const rostersMap = loadRostersMap();
   const snapshot = rostersMap[rosterName];
