@@ -1,5 +1,8 @@
 // --- Data model & persistence ----------------------------------------------
 
+const REPO_OWNER = "gkhumble1";
+const REPO_NAME = "Organized-Pickleball-Manager";
+const FILE_PATH = "players.json";
 const STORAGE_KEY = "pickleball_rotation_v1";
 
 let players = [];
