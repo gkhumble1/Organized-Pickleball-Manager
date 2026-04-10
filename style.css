@@ -142,6 +142,24 @@ body.dark-mode .panel {
   margin-bottom: 4px;
 }
 
+.roster-section {
+  margin-bottom: 20px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f8f8f8;
+}
+
+.roster-section h3 {
+  margin-top: 0;
+}
+
+.roster-section button {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+
 .players-list {
   max-height: 260px;
   overflow-y: auto;
