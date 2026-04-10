@@ -1,0 +1,34 @@
+name: Update Roster
+
+on:
+  push:
+    paths:
+      - ".roster/update.json"
+
+jobs:
+  update-roster:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Read roster update
+        id: read
+        run: |
+          echo "ROSTER=$(cat .roster/update.json)" >> $GITHUB_ENV
+
+      - name: Update players.json
+        run: |
+          echo "$ROSTER" > players.json
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add players.json
+          git commit -m "Update roster" || echo "No changes to commit"
+          git push
