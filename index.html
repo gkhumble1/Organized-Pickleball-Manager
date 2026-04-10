@@ -120,21 +120,28 @@
     </section>
   </main>
 
-  <!-- Modal: Record Round Results -->
-  <div id="resultsModal" class="modal hidden">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Record Round Results</h2>
-        <button id="closeResultsModal" class="icon-button">✕</button>
-      </div>
-      <div id="resultsModalBody" class="modal-body"></div>
-      <div class="modal-footer">
-        <button id="saveResultsBtn" class="primary">Save Results</button>
-        <button id="cancelResultsBtn" class="secondary">Cancel</button>
-      </div>
+ <!-- Modal: Record Round Results -->
+<div id="resultsModal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Record Round Results</h2>
+      <button id="closeResultsModal" class="icon-button">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <label for="winnerTeamSelect">Select winning team:</label>
+      <select id="winnerTeamSelect"></select>
+
+      <div id="courtResultsContainer" class="results-container"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button id="saveResultsBtn" class="primary">Save Results</button>
+      <button id="cancelResultsBtn" class="secondary">Cancel</button>
     </div>
   </div>
+</div>
 
   <!-- Modal: Edit Wins/Losses -->
   <div id="editWLModal" class="modal hidden">
