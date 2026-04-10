@@ -131,6 +131,26 @@ function loadRosterFromSelect() {
     alert("Cloud season file is missing or invalid.");
     return;
   }
+    async function loadSeasonFromCloud() {
+  try {
+    const url = "https://raw.githubusercontent.com/gkhumble1/Organized-Pickleball-Manager/main/shared-season-stats.json";
+
+    const response = await fetch(url + "?t=" + Date.now()); 
+    // ?t=timestamp prevents caching
+
+    if (!response.ok) {
+      alert("Could not load cloud season stats. File not found or network issue.");
+      return;
+    }
+
+    const snapshot = await response.json();
+    applySeasonSnapshot(snapshot);
+
+  } catch (err) {
+    console.error(err);
+    alert("Error loading season stats from cloud.");
+  }
+}
 
   // Apply season stats to each player
   for (let i = 0; i < players.length; i++) {
