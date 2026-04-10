@@ -205,7 +205,7 @@ function renderPlayersList() {
     nameInput.value = p.name;
     nameInput.placeholder = "Player " + p.id;
     nameInput.className = "player-name";
-    nameInput.addEventListener("change", () => {
+    nameInput.addEventListener("input", () => {
       const oldName = p.name;
       const newName = nameInput.value.trim();
       if (newName === oldName) return;
