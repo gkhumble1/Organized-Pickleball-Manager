@@ -841,11 +841,7 @@ document.getElementById("savePlayersBtn").addEventListener("click", async () => 
     });
 
     const data = { players };
-
-    await fetch(".roster/update.json", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+  
     });
 
     alert("Players saved! The roster will update in a few seconds.");
