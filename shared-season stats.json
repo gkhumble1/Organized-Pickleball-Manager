@@ -1,0 +1,11 @@
+{
+  "players": [
+    {
+      "id": 1,
+      "name": "",
+      "games": 0,
+      "wins": 0,
+      "losses": 0
+    }
+  ]
+}
