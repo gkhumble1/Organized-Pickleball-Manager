@@ -22,6 +22,10 @@ jobs:
         run: |
           echo '${{ github.event.inputs.roster }}' > players.json
 
+      - name: Configure GitHub token
+        run: |
+          git config --global url."https://${{ secrets.ROSTER_TOKEN }}:@github.com/".insteadOf "https://github.com/"
+
       - name: Commit changes
         run: |
           git config user.name "github-actions"
