@@ -1,10 +1,8 @@
 // --- Data model & persistence ----------------------------------------------
 
-const REPO_OWNER = "gkhumble1";
-const REPO_NAME = "Organized-Pickleball-Manager";
-const FILE_PATH = "players.json";
 const STORAGE_KEY = "pickleball_rotation_v1";
 
+// Player objects stored in memory
 let players = [];
 let courts = [];
 let historyStack = [];
@@ -14,28 +12,28 @@ let timerRemaining = 15 * 60;
 
 // Initialize 20 fixed slots
 function initPlayers() {
-  const saved = loadState();
-  if (saved && saved.players && Array.isArray(saved.players)) {
-    players = saved.players;
-  } else {
-    players = [];
-    for (let i = 1; i <= 20; i++) {
-      players.push({
-        id: i,
-        name: "",
-        active: false,
-        games: 0,
-        rest: 0,
-        wins: 0,
-        losses: 0,
-        partners: {}, // partnerId -> count
-        opponents: {}, // opponentId -> count
-      });
-    }
+  players = [];
+  for (let i = 1; i <= 20; i++) {
+    players.push({
+      id: i,
+      name: "",
+      active: false,
+      games: 0,
+      rest: 0,
+      wins: 0,
+      losses: 0,
+      partners: {},
+      opponents: {},
+    });
   }
-  courts = saved?.courts || [];
-  currentRoundId = saved?.currentRoundId || 0;
-  timerRemaining = saved?.timerRemaining || 15 * 60;
+
+  const saved = loadState();
+  if (saved) {
+    players = saved.players || players;
+    courts = saved.courts || [];
+    currentRoundId = saved.currentRoundId || 0;
+    timerRemaining = saved.timerRemaining || 15 * 60;
+  }
 }
 
 function saveState() {
@@ -65,6 +63,7 @@ const $ = (id) => document.getElementById(id);
 function renderPlayersList() {
   const container = $("playersList");
   container.innerHTML = "";
+
   players.forEach((p) => {
     const row = document.createElement("div");
     row.className = "player-row";
@@ -76,20 +75,9 @@ function renderPlayersList() {
     nameInput.type = "text";
     nameInput.value = p.name;
     nameInput.placeholder = "Player " + p.id;
-    nameInput.addEventListener("change", () => {
-      const oldName = p.name;
-      const newName = nameInput.value.trim();
-      if (newName === oldName) return;
-      p.name = newName;
-      // If name changed from non-empty to different non-empty, reset stats
-      if (oldName && oldName !== newName) {
-        p.games = 0;
-        p.rest = 0;
-        p.wins = 0;
-        p.losses = 0;
-        p.partners = {};
-        p.opponents = {};
-      }
+    nameInput.className = "player-name"; // REQUIRED for Save/Load
+    nameInput.addEventListener("input", () => {
+      p.name = nameInput.value.trim();
       saveState();
       renderStatsTable();
       renderSummary();
@@ -116,6 +104,7 @@ function renderPlayersList() {
 function renderStatsTable() {
   const tbody = $("statsTableBody");
   tbody.innerHTML = "";
+
   players.forEach((p) => {
     const tr = document.createElement("tr");
     tr.dataset.playerId = p.id;
@@ -127,16 +116,10 @@ function renderStatsTable() {
     tdName.textContent = p.name || "(empty)";
 
     const tdGames = document.createElement("td");
-    const gamesChip = document.createElement("span");
-    gamesChip.className = "stats-chip " + gamesChipClass(p.games);
-    gamesChip.textContent = p.games;
-    tdGames.appendChild(gamesChip);
+    tdGames.textContent = p.games;
 
     const tdRest = document.createElement("td");
-    const restChip = document.createElement("span");
-    restChip.className = "stats-chip " + restChipClass(p.rest);
-    restChip.textContent = p.rest;
-    tdRest.appendChild(restChip);
+    tdRest.textContent = p.rest;
 
     const tdWins = document.createElement("td");
     tdWins.textContent = p.wins;
@@ -170,30 +153,13 @@ function renderStatsTable() {
   });
 }
 
-function gamesChipClass(games) {
-  if (games <= 2) return "games-low";
-  if (games <= 5) return "games-mid";
-  return "games-high";
-}
-
-function restChipClass(rest) {
-  if (rest >= 3) return "rest-high";
-  if (rest === 2) return "rest-mid";
-  return "rest-low";
-}
-
 function renderCourts() {
   const container = $("courtsContainer");
   container.innerHTML = "";
+
   courts.forEach((court, index) => {
     const card = document.createElement("div");
     card.className = "court-card";
-    card.style.background =
-      index === 0
-        ? "var(--court1)"
-        : index === 1
-        ? "var(--court2)"
-        : "var(--court3)";
 
     const header = document.createElement("div");
     header.className = "court-header";
@@ -228,13 +194,7 @@ function renderCourts() {
       const p = players.find((x) => x.id === pid);
       const tag = document.createElement("div");
       tag.className = "player-tag";
-      const left = document.createElement("span");
-      left.innerHTML = `<span class="player-number">#${p.id}</span><span class="player-name">${p.name || "(empty)"}</span>`;
-      const right = document.createElement("span");
-      right.className = "player-meta";
-      right.textContent = `${p.games}G / ${p.wins}W`;
-      tag.appendChild(left);
-      tag.appendChild(right);
+      tag.textContent = `#${p.id} ${p.name}`;
       team1.appendChild(tag);
     });
 
@@ -242,13 +202,7 @@ function renderCourts() {
       const p = players.find((x) => x.id === pid);
       const tag = document.createElement("div");
       tag.className = "player-tag";
-      const left = document.createElement("span");
-      left.innerHTML = `<span class="player-number">#${p.id}</span><span class="player-name">${p.name || "(empty)"}</span>`;
-      const right = document.createElement("span");
-      right.className = "player-meta";
-      right.textContent = `${p.games}G / ${p.wins}W`;
-      tag.appendChild(left);
-      tag.appendChild(right);
+      tag.textContent = `#${p.id} ${p.name}`;
       team2.appendChild(tag);
     });
 
@@ -260,6 +214,9 @@ function renderCourts() {
     container.appendChild(card);
   });
 }
+}
+
+// --- Summary & Needs to Play ----------------------------------------------
 
 function renderSummary() {
   const list = $("sessionSummary");
@@ -271,22 +228,13 @@ function renderSummary() {
   const totalWins = players.reduce((sum, p) => sum + p.wins, 0);
   const totalLosses = players.reduce((sum, p) => sum + p.losses, 0);
 
-  const li1 = document.createElement("li");
-  li1.textContent = `Total players with names: ${totalPlayers}`;
-  const li2 = document.createElement("li");
-  li2.textContent = `Active players this session: ${activePlayers.length}`;
-  const li3 = document.createElement("li");
-  li3.textContent = `Total games counted (sum of individual games): ${totalGames}`;
-  const li4 = document.createElement("li");
-  li4.textContent = `Total wins recorded: ${totalWins}`;
-  const li5 = document.createElement("li");
-  li5.textContent = `Total losses recorded: ${totalLosses}`;
-
-  list.appendChild(li1);
-  list.appendChild(li2);
-  list.appendChild(li3);
-  list.appendChild(li4);
-  list.appendChild(li5);
+  list.innerHTML = `
+    <li>Total players with names: ${totalPlayers}</li>
+    <li>Active players this session: ${activePlayers.length}</li>
+    <li>Total games counted: ${totalGames}</li>
+    <li>Total wins recorded: ${totalWins}</li>
+    <li>Total losses recorded: ${totalLosses}</li>
+  `;
 }
 
 function renderNeedsToPlay() {
@@ -295,9 +243,7 @@ function renderNeedsToPlay() {
 
   const activePlayers = players.filter((p) => p.active && p.name.trim());
   if (activePlayers.length === 0) {
-    const li = document.createElement("li");
-    li.textContent = "No active players.";
-    list.appendChild(li);
+    list.innerHTML = "<li>No active players.</li>";
     return;
   }
 
@@ -309,10 +255,12 @@ function renderNeedsToPlay() {
 
   sorted.slice(0, 5).forEach((p) => {
     const li = document.createElement("li");
-    li.textContent = `#${p.id} ${p.name || "(empty)"} — Rest: ${p.rest}, Games: ${p.games}`;
+    li.textContent = `#${p.id} ${p.name} — Rest: ${p.rest}, Games: ${p.games}`;
     list.appendChild(li);
   });
 }
+
+// --- Player Details --------------------------------------------------------
 
 function renderPlayerDetails(playerId) {
   const p = players.find((x) => x.id === playerId);
@@ -322,45 +270,26 @@ function renderPlayerDetails(playerId) {
     return;
   }
 
-  const totalGames = p.games;
   const totalResults = p.wins + p.losses;
   const winPct =
     totalResults > 0 ? ((p.wins / totalResults) * 100).toFixed(1) + "%" : "—";
 
-  const partners = Object.entries(p.partners)
-    .map(([pid, count]) => {
-      const partner = players.find((x) => x.id === Number(pid));
-      return `${partner ? partner.name || "#" + partner.id : "#" + pid} (${count})`;
-    })
-    .sort();
-
-  const opponents = Object.entries(p.opponents)
-    .map(([pid, count]) => {
-      const opp = players.find((x) => x.id === Number(pid));
-      return `${opp ? opp.name || "#" + opp.id : "#" + pid} (${count})`;
-    })
-    .sort();
-
   container.innerHTML = `
-    <h4>#${p.id} ${p.name || "(empty)"}</h4>
-    <p><strong>Games:</strong> ${totalGames}</p>
+    <h4>#${p.id} ${p.name}</h4>
+    <p><strong>Games:</strong> ${p.games}</p>
     <p><strong>Rest rounds:</strong> ${p.rest}</p>
     <p><strong>Wins:</strong> ${p.wins}</p>
     <p><strong>Losses:</strong> ${p.losses}</p>
     <p><strong>Win %:</strong> ${winPct}</p>
-    <p><strong>Partners:</strong></p>
-    <ul>${partners.length ? partners.map((x) => `<li>${x}</li>`).join("") : "<li>None yet</li>"}</ul>
-    <p><strong>Opponents:</strong></p>
-    <ul>${opponents.length ? opponents.map((x) => `<li>${x}</li>`).join("") : "<li>None yet</li>"}</ul>
   `;
 }
 
-// --- Rotation logic --------------------------------------------------------
+// --- Rotation Logic --------------------------------------------------------
 
 function generateNextRound() {
   const activePlayers = players.filter((p) => p.active && p.name.trim());
   if (activePlayers.length < 4) {
-    alert("Need at least 4 active players with names to create a round.");
+    alert("Need at least 4 active players with names.");
     return;
   }
 
@@ -370,7 +299,6 @@ function generateNextRound() {
     return;
   }
 
-  // Sort by rest desc, games asc, id asc
   const sorted = [...activePlayers].sort((a, b) => {
     if (b.rest !== a.rest) return b.rest - a.rest;
     if (a.games !== b.games) return a.games - b.games;
@@ -379,23 +307,21 @@ function generateNextRound() {
 
   const playersThisRound = sorted.slice(0, courtsCount * 4);
 
-  // Build courts
   const newCourts = [];
   for (let c = 0; c < courtsCount; c++) {
     const group = playersThisRound.slice(c * 4, c * 4 + 4);
-    const ids = group.map((p) => p.id);
-    const bestSplit = chooseBestTeamSplit(ids);
-    newCourts.push(bestSplit);
+    newCourts.push({
+      team1: [group[0].id, group[1].id],
+      team2: [group[2].id, group[3].id],
+    });
   }
 
-  // Save history snapshot for undo
   historyStack.push({
     roundId: currentRoundId + 1,
     players: JSON.parse(JSON.stringify(players)),
     courts: JSON.parse(JSON.stringify(courts)),
   });
 
-  // Update stats
   const playingIds = newCourts.flatMap((c) => [...c.team1, ...c.team2]);
   const playingSet = new Set(playingIds);
 
@@ -408,26 +334,6 @@ function generateNextRound() {
     }
   });
 
-  // Update partner/opponent history
-  newCourts.forEach((court) => {
-    const [a, b] = court.team1;
-    const [c, d] = court.team2;
-
-    addPartner(a, b);
-    addPartner(b, a);
-    addPartner(c, d);
-    addPartner(d, c);
-
-    [a, b].forEach((pid) => {
-      addOpponent(pid, c);
-      addOpponent(pid, d);
-    });
-    [c, d].forEach((pid) => {
-      addOpponent(pid, a);
-      addOpponent(pid, b);
-    });
-  });
-
   courts = newCourts;
   currentRoundId += 1;
   saveState();
@@ -435,75 +341,6 @@ function generateNextRound() {
   renderStatsTable();
   renderSummary();
   renderNeedsToPlay();
-}
-
-function addPartner(pid, partnerId) {
-  const p = players.find((x) => x.id === pid);
-  if (!p) return;
-  p.partners[partnerId] = (p.partners[partnerId] || 0) + 1;
-}
-
-function addOpponent(pid, oppId) {
-  const p = players.find((x) => x.id === pid);
-  if (!p) return;
-  p.opponents[oppId] = (p.opponents[oppId] || 0) + 1;
-}
-
-// Choose best team split for 4 players based on partner/opponent penalties
-function chooseBestTeamSplit(ids) {
-  const [p1, p2, p3, p4] = ids;
-  const splits = [
-    { team1: [p1, p2], team2: [p3, p4] },
-    { team1: [p1, p3], team2: [p2, p4] },
-    { team1: [p1, p4], team2: [p2, p3] },
-  ];
-
-  let best = splits[0];
-  let bestScore = Infinity;
-
-  splits.forEach((s) => {
-    const score = teamSplitPenalty(s.team1, s.team2);
-    if (score < bestScore) {
-      bestScore = score;
-      best = s;
-    }
-  });
-
-  return best;
-}
-
-function teamSplitPenalty(team1, team2) {
-  const [a, b] = team1;
-  const [c, d] = team2;
-
-  let penalty = 0;
-
-  const pa = players.find((x) => x.id === a);
-  const pb = players.find((x) => x.id === b);
-  const pc = players.find((x) => x.id === c);
-  const pd = players.find((x) => x.id === d);
-
-  const partnerWeight = 3;
-  const opponentWeight = 1;
-
-  penalty += (pa.partners[b] || 0) * partnerWeight;
-  penalty += (pb.partners[a] || 0) * partnerWeight;
-  penalty += (pc.partners[d] || 0) * partnerWeight;
-  penalty += (pd.partners[c] || 0) * partnerWeight;
-
-  [a, b].forEach((pid) => {
-    const p = players.find((x) => x.id === pid);
-    penalty += (p.opponents[c] || 0) * opponentWeight;
-    penalty += (p.opponents[d] || 0) * opponentWeight;
-  });
-
-  [c, d].forEach((pid) => {
-    const p = players.find((x) => x.id === pid);
-    penalty += (p.opponents[a] || 0) * opponentWeight;
-    penalty += (p.opponents[b] || 0) * opponentWeight;
-  });
-
-  return penalty;
 }
 
 // --- Undo ------------------------------------------------------------------
@@ -524,117 +361,7 @@ function undoLastRound() {
   renderNeedsToPlay();
 }
 
-// --- Results modal (wins/losses) ------------------------------------------
-
-let pendingResults = null;
-
-function openResultsModal() {
-  if (!courts || courts.length === 0) {
-    alert("No current round to record results for.");
-    return;
-  }
-  pendingResults = {};
-  const body = $("resultsModalBody");
-  body.innerHTML = "";
-
-  courts.forEach((court, index) => {
-    const block = document.createElement("div");
-    block.className = "results-court-block";
-
-    const title = document.createElement("h4");
-    title.textContent = `Court ${index + 1}`;
-    block.appendChild(title);
-
-    const team1Option = document.createElement("div");
-    team1Option.className = "results-team-option";
-    const team1Radio = document.createElement("input");
-    team1Radio.type = "radio";
-    team1Radio.name = "court" + index;
-    team1Radio.value = "team1";
-    const team1Label = document.createElement("div");
-    team1Label.className = "results-team-label";
-    court.team1.forEach((pid) => {
-      const p = players.find((x) => x.id === pid);
-      const span = document.createElement("span");
-      span.textContent = `#${p.id} ${p.name || ""}`;
-      team1Label.appendChild(span);
-    });
-    team1Option.appendChild(team1Radio);
-    team1Option.appendChild(team1Label);
-
-    const team2Option = document.createElement("div");
-    team2Option.className = "results-team-option";
-    const team2Radio = document.createElement("input");
-    team2Radio.type = "radio";
-    team2Radio.name = "court" + index;
-    team2Radio.value = "team2";
-    const team2Label = document.createElement("div");
-    team2Label.className = "results-team-label";
-    court.team2.forEach((pid) => {
-      const p = players.find((x) => x.id === pid);
-      const span = document.createElement("span");
-      span.textContent = `#${p.id} ${p.name || ""}`;
-      team2Label.appendChild(span);
-    });
-    team2Option.appendChild(team2Radio);
-    team2Option.appendChild(team2Label);
-
-    block.appendChild(team1Option);
-    block.appendChild(team2Option);
-    body.appendChild(block);
-  });
-
-  $("resultsModal").classList.remove("hidden");
-}
-
-function closeResultsModal() {
-  $("resultsModal").classList.add("hidden");
-  pendingResults = null;
-}
-
-function saveResults() {
-  if (!courts || courts.length === 0) {
-    closeResultsModal();
-    return;
-  }
-
-  const winners = [];
-  const losers = [];
-
-  courts.forEach((court, index) => {
-    const radios = document.querySelectorAll(`input[name="court${index}"]`);
-    let winner = null;
-    radios.forEach((r) => {
-      if (r.checked) winner = r.value;
-    });
-    if (!winner) return;
-
-    if (winner === "team1") {
-      winners.push(...court.team1);
-      losers.push(...court.team2);
-    } else {
-      winners.push(...court.team2);
-      losers.push(...court.team1);
-    }
-  });
-
-  winners.forEach((pid) => {
-    const p = players.find((x) => x.id === pid);
-    if (p) p.wins += 1;
-  });
-  losers.forEach((pid) => {
-    const p = players.find((x) => x.id === pid);
-    if (p) p.losses += 1;
-  });
-
-  saveState();
-  renderStatsTable();
-  renderSummary();
-  renderNeedsToPlay();
-  closeResultsModal();
-}
-
-// --- Edit Wins/Losses modal -----------------------------------------------
+// --- Wins/Losses Modal -----------------------------------------------------
 
 let editWLPlayerId = null;
 
@@ -642,7 +369,7 @@ function openEditWLModal(playerId) {
   const p = players.find((x) => x.id === playerId);
   if (!p) return;
   editWLPlayerId = playerId;
-  $("editWLPlayerName").textContent = `#${p.id} ${p.name || "(empty)"}`;
+  $("editWLPlayerName").textContent = `#${p.id} ${p.name}`;
   $("editWinsInput").value = p.wins;
   $("editLossesInput").value = p.losses;
   $("editWLModal").classList.remove("hidden");
@@ -657,10 +384,8 @@ function saveWL() {
   if (!editWLPlayerId) return;
   const p = players.find((x) => x.id === editWLPlayerId);
   if (!p) return;
-  const wins = parseInt($("editWinsInput").value, 10);
-  const losses = parseInt($("editLossesInput").value, 10);
-  p.wins = isNaN(wins) ? 0 : wins;
-  p.losses = isNaN(losses) ? 0 : losses;
+  p.wins = parseInt($("editWinsInput").value, 10) || 0;
+  p.losses = parseInt($("editLossesInput").value, 10) || 0;
   saveState();
   renderStatsTable();
   renderSummary();
@@ -686,7 +411,7 @@ function startTimer() {
       clearInterval(timerInterval);
       timerInterval = null;
       updateTimerDisplay();
-      alert("Round time is up! Consider generating the next round.");
+      alert("Round time is up!");
       return;
     }
     updateTimerDisplay();
@@ -707,17 +432,15 @@ function resetTimer() {
   saveState();
 }
 
-// --- Theme toggle ----------------------------------------------------------
+// --- Theme Toggle ----------------------------------------------------------
 
 function initTheme() {
   const saved = localStorage.getItem("pickleball_theme");
   if (saved === "dark") {
     document.body.classList.add("dark-mode");
-    document.body.classList.remove("light-mode");
     $("themeIcon").textContent = "🌙";
   } else {
     document.body.classList.add("light-mode");
-    document.body.classList.remove("dark-mode");
     $("themeIcon").textContent = "🌞";
   }
 }
@@ -737,65 +460,47 @@ function toggleTheme() {
   }
 }
 
-// --- Controls --------------------------------------------------------------
+// --- Save/Load to GitHub (names only) -------------------------------------
 
-function randomizeOrder() {
-  const active = players.filter((p) => p.active && p.name.trim());
-  const inactive = players.filter((p) => !p.active || !p.name.trim());
-  for (let i = active.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [active[i], active[j]] = [active[j], active[i]];
-  }
-  const combined = [...active, ...inactive];
-  combined.forEach((p, idx) => {
-    p.id = idx + 1;
+document.getElementById("savePlayersBtn").addEventListener("click", async () => {
+  const names = players.map((p) => p.name.trim());
+  const rosterJson = JSON.stringify({ players: names });
+
+  await fetch(
+    "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/update-roster.yml/dispatches",
+    {
+      method: "POST",
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ref: "main",
+        inputs: { roster: rosterJson },
+      }),
+    }
+  );
+
+  alert("Players saved! The roster will update shortly.");
+});
+
+document.getElementById("loadPlayersBtn").addEventListener("click", async () => {
+  const response = await fetch("players.json");
+  const data = await response.json();
+  const names = data.players || [];
+
+  players.forEach((p, i) => {
+    p.name = names[i] || "";
   });
-  players = combined.sort((a, b) => a.id - b.id);
+
   saveState();
   renderPlayersList();
   renderStatsTable();
   renderSummary();
   renderNeedsToPlay();
-}
 
-function resetSessionKeepNames() {
-  if (!confirm("Reset session stats (games, rest, partners, opponents) but keep names and wins/losses?")) {
-    return;
-  }
-  players.forEach((p) => {
-    p.games = 0;
-    p.rest = 0;
-    p.partners = {};
-    p.opponents = {};
-  });
-  courts = [];
-  currentRoundId = 0;
-  historyStack = [];
-  saveState();
-  renderCourts();
-  renderStatsTable();
-  renderSummary();
-  renderNeedsToPlay();
-}
-
-function resetEverything() {
-  if (!confirm("Reset EVERYTHING (names, stats, wins, losses, history)?")) {
-    return;
-  }
-  localStorage.removeItem(STORAGE_KEY);
-  players = [];
-  courts = [];
-  historyStack = [];
-  currentRoundId = 0;
-  initPlayers();
-  saveState();
-  renderPlayersList();
-  renderStatsTable();
-  renderCourts();
-  renderSummary();
-  renderNeedsToPlay();
-  $("playerDetails").innerHTML = "<p>No player selected.</p>";
-}
+  alert("Saved players loaded!");
+});
 
 // --- Init ------------------------------------------------------------------
 
@@ -830,45 +535,3 @@ window.addEventListener("DOMContentLoaded", () => {
   $("resetTimerBtn").addEventListener("click", resetTimer);
   $("timerDuration").addEventListener("change", resetTimer);
 });
-
-    document.getElementById("savePlayersBtn").addEventListener("click", async () => {
-    const players = [];
-
-    document.querySelectorAll(".player-name").forEach(input => {
-        if (input.value.trim() !== "") {
-            players.push(input.value.trim());
-        }
-    });
-
-    const rosterJson = JSON.stringify({ players });
-
-    await fetch("https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/update-roster.yml/dispatches", {
-        method: "POST",
-        headers: {
-            "Accept": "application/vnd.github+json",
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            ref: "main",
-            inputs: {
-                roster: rosterJson
-            }
-        })
-    });
-
-    alert("Players saved! The roster will update in a few seconds.");
-});
-
-document.getElementById("loadPlayersBtn").addEventListener("click", async () => {
-    const response = await fetch("players.json");
-    const data = await response.json();
-
-    const players = data.players || [];
-
-    document.querySelectorAll(".player-name").forEach((input, index) => {
-        input.value = players[index] || "";
-    });
-
-    alert("Saved players loaded!");
-});
-
