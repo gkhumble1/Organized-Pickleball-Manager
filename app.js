@@ -776,6 +776,77 @@ function resetEverything() {
   renderNeedsToPlay();
   updateTimerDisplay();
 }
+// --- Results Modal ---------------------------------------------------------
+
+function openResultsModal() {
+  const modal = $("resultsModal");
+  const select = $("winnerTeamSelect");
+  const container = $("courtResultsContainer");
+
+  if (!modal || !select || !container) return;
+
+  // Clear old content
+  select.innerHTML = "";
+  container.innerHTML = "";
+
+  // Build options for each court/team
+  courts.forEach((court, index) => {
+    const opt1 = document.createElement("option");
+    opt1.value = `court${index}-team1`;
+    opt1.textContent = `Court ${index + 1} - Team 1`;
+    select.appendChild(opt1);
+
+    const opt2 = document.createElement("option");
+    opt2.value = `court${index}-team2`;
+    opt2.textContent = `Court ${index + 1} - Team 2`;
+    select.appendChild(opt2);
+  });
+
+  modal.classList.remove("hidden");
+}
+
+function closeResultsModal() {
+  const modal = $("resultsModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function saveResults() {
+  const select = $("winnerTeamSelect");
+  if (!select) return closeResultsModal();
+
+  const value = select.value;
+  if (!value) return closeResultsModal();
+
+  const match = value.match(/^court(\d+)-team(\d+)$/);
+  if (!match) return closeResultsModal();
+
+  const courtIndex = parseInt(match[1], 10);
+  const teamNumber = parseInt(match[2], 10);
+
+  const court = courts[courtIndex];
+  if (!court) return closeResultsModal();
+
+  const winners = teamNumber === 1 ? court.team1 : court.team2;
+  const losers = teamNumber === 1 ? court.team2 : court.team1;
+
+  players.forEach((p) => {
+    if (winners.includes(p.id)) {
+      p.wins += 1;
+      p.seasonWins += 1;
+      p.seasonGames += 1;
+    } else if (losers.includes(p.id)) {
+      p.losses += 1;
+      p.seasonLosses += 1;
+      p.seasonGames += 1;
+    }
+  });
+
+  saveState();
+  renderStatsTable();
+  renderSummary();
+  renderNeedsToPlay();
+  closeResultsModal();
+}
 
 // --- Init ------------------------------------------------------------------
 
