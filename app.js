@@ -126,68 +126,6 @@ function loadRosterFromSelect() {
     alert("Please select a roster first.");
     return;
   }
-  function applySeasonSnapshot(snapshot) {
-  if (!snapshot || !snapshot.players) {
-    alert("Cloud season file is missing or invalid.");
-    return;
-  }
-    async function loadSeasonFromCloud() {
-  try {
-    const url = "https://raw.githubusercontent.com/gkhumble1/Organized-Pickleball-Manager/main/shared-season-stats.json";
-
-    const response = await fetch(url + "?t=" + Date.now()); 
-    // ?t=timestamp prevents caching
-
-    if (!response.ok) {
-      alert("Could not load cloud season stats. File not found or network issue.");
-      return;
-    }
-
-    const snapshot = await response.json();
-    applySeasonSnapshot(snapshot);
-
-  } catch (err) {
-    console.error(err);
-    alert("Error loading season stats from cloud.");
-  }
-}
-
-  // Apply season stats to each player
-  for (let i = 0; i < players.length; i++) {
-    const p = players[i];
-    const snap = snapshot.players[i];
-
-    if (!snap) continue;
-
-    // Season stats
-    p.name = snap.name || "";
-    p.games = snap.games || 0;
-    p.wins = snap.wins || 0;
-    p.losses = snap.losses || 0;
-
-    // Reset session stats
-    p.rest = 0;
-    p.partners = {};
-    p.opponents = {};
-  }
-
-  // Reset session-wide state
-  courts = [];
-  historyStack = [];
-  currentRoundId = 0;
-
-  // Save + re-render everything
-  saveState();
-  renderPlayersList();
-  renderStatsTable();
-  renderCourts();
-  renderSummary();
-  renderNeedsToPlay();
-
-  $("playerDetails").innerHTML = "<p>No player selected.</p>";
-
-  alert("Season stats loaded from cloud.");
-}
 
   const rostersMap = loadRostersMap();
   const snapshot = rostersMap[rosterName];
@@ -248,6 +186,70 @@ function loadRosterFromSelect() {
   alert(`Roster "${rosterName}" loaded.`);
 }
 
+// --- Season snapshot from cloud -------------------------------------------
+
+function applySeasonSnapshot(snapshot) {
+  if (!snapshot || !snapshot.players) {
+    alert("Cloud season file is missing or invalid.");
+    return;
+  }
+
+  // Apply season stats to each player
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    const snap = snapshot.players[i];
+
+    if (!snap) continue;
+
+    // Season stats
+    p.name = snap.name || "";
+    p.games = snap.games || 0;
+    p.wins = snap.wins || 0;
+    p.losses = snap.losses || 0;
+
+    // Reset session stats
+    p.rest = 0;
+    p.partners = {};
+    p.opponents = {};
+  }
+
+  // Reset session-wide state
+  courts = [];
+  historyStack = [];
+  currentRoundId = 0;
+
+  // Save + re-render everything
+  saveState();
+  renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+
+  $("playerDetails").innerHTML = "<p>No player selected.</p>";
+
+  alert("Season stats loaded from cloud.");
+}
+
+async function loadSeasonFromCloud() {
+  try {
+    const url = "https://raw.githubusercontent.com/gkhumble1/Organized-Pickleball-Manager/main/shared-season-stats.json";
+
+    const response = await fetch(url + "?t=" + Date.now()); // prevent caching
+
+    if (!response.ok) {
+      alert("Could not load cloud season stats. File not found or network issue.");
+      return;
+    }
+
+    const snapshot = await response.json();
+    applySeasonSnapshot(snapshot);
+  } catch (err) {
+    console.error(err);
+    alert("Error loading season stats from cloud.");
+  }
+}
+
 // --- DOM helpers -----------------------------------------------------------
 
 const $ = (id) => document.getElementById(id);
@@ -285,7 +287,7 @@ function renderPlayersList() {
       renderSummary();
       renderNeedsToPlay();
     });
-    
+
     nameInput.addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -355,6 +357,16 @@ function renderStatsTable() {
     });
     tdEdit.appendChild(editBtn);
 
+    const tdDelete = document.createElement("td");
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Delete";
+    deleteBtn.className = "danger";
+    deleteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deletePlayer(p.id);
+    });
+    tdDelete.appendChild(deleteBtn);
+
     tr.appendChild(tdId);
     tr.appendChild(tdName);
     tr.appendChild(tdGames);
@@ -362,6 +374,7 @@ function renderStatsTable() {
     tr.appendChild(tdWins);
     tr.appendChild(tdLosses);
     tr.appendChild(tdEdit);
+    tr.appendChild(tdDelete);
 
     tr.addEventListener("click", () => {
       renderPlayerDetails(p.id);
@@ -554,6 +567,34 @@ function renderPlayerDetails(playerId) {
     <p><strong>Opponents:</strong></p>
     <ul>${opponents.length ? opponents.map((x) => `<li>${x}</li>`).join("") : "<li>None yet</li>"}</ul>
   `;
+}
+
+// --- Delete player ---------------------------------------------------------
+
+function deletePlayer(playerId) {
+  const p = players.find((x) => x.id === playerId);
+  if (!p) return;
+
+  if (!confirm(`Delete player #${p.id} "${p.name || ""}" for this season? This clears their name and stats.`)) {
+    return;
+  }
+
+  p.name = "";
+  p.active = false;
+  p.games = 0;
+  p.rest = 0;
+  p.wins = 0;
+  p.losses = 0;
+  p.partners = {};
+  p.opponents = {};
+
+  saveState();
+  renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+  $("playerDetails").innerHTML = "<p>No player selected.</p>";
 }
 
 // --- Rotation logic --------------------------------------------------------
@@ -1035,5 +1076,10 @@ window.addEventListener("DOMContentLoaded", () => {
   const loadRosterFromSelectBtn = $("loadRosterFromSelectBtn");
   if (loadRosterFromSelectBtn) {
     loadRosterFromSelectBtn.addEventListener("click", loadRosterFromSelect);
+  }
+
+  const loadSeasonCloudBtn = $("loadSeasonCloudBtn");
+  if (loadSeasonCloudBtn) {
+    loadSeasonCloudBtn.addEventListener("click", loadSeasonFromCloud);
   }
 });
