@@ -1,9 +1,11 @@
 name: Update Roster
 
 on:
-  push:
-    paths:
-      - ".roster/update.json"
+  workflow_dispatch:
+    inputs:
+      roster:
+        description: "Roster JSON"
+        required: true
 
 jobs:
   update-roster:
@@ -16,14 +18,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Read roster update
-        id: read
-        run: |
-          echo "ROSTER=$(cat .roster/update.json)" >> $GITHUB_ENV
-
       - name: Update players.json
         run: |
-          echo "$ROSTER" > players.json
+          echo '${{ github.event.inputs.roster }}' > players.json
 
       - name: Commit changes
         run: |
