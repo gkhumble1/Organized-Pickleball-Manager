@@ -18,12 +18,21 @@ function initPlayers() {
       id: i,
       name: "",
       active: false,
+
+      // Daily stats
       games: 0,
       rest: 0,
       wins: 0,
       losses: 0,
       partners: {},
       opponents: {},
+
+      // ⭐ REQUIRED for roster saving/loading ⭐
+      seasonGames: 0,
+      seasonWins: 0,
+      seasonLosses: 0,
+      seasonPartners: {},
+      seasonOpponents: {}
     });
   }
 
