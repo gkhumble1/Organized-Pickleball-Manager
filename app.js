@@ -827,3 +827,43 @@ window.addEventListener("DOMContentLoaded", () => {
   $("resetTimerBtn").addEventListener("click", resetTimer);
   $("timerDuration").addEventListener("change", resetTimer);
 });
+
+// ------------------------------
+// LOAD SAVED PLAYERS
+// ------------------------------
+document.getElementById("loadPlayersBtn").addEventListener("click", async () => {
+    const response = await fetch("players.json");
+    const data = await response.json();
+
+    const players = data.players || [];
+
+    document.querySelectorAll(".player-name").forEach((input, index) => {
+        input.value = players[index] || "";
+    });
+
+    alert("Saved players loaded!");
+});
+
+// ------------------------------
+// SAVE PLAYERS TO WEBSITE
+// ------------------------------
+document.getElementById("savePlayersBtn").addEventListener("click", async () => {
+    const players = [];
+
+    document.querySelectorAll(".player-name").forEach(input => {
+        if (input.value.trim() !== "") {
+            players.push(input.value.trim());
+        }
+    });
+
+    const data = { players };
+
+    await fetch("players.json", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    alert("Players saved to website!");
+});
+
