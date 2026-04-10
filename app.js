@@ -222,17 +222,18 @@ function renderPlayersList() {
       renderSummary();
       renderNeedsToPlay();
     });
-// Move to next player on Enter
-nameInput.addEventListener("keydown", function (e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    const inputs = document.querySelectorAll(".player-name");
-    const index = Array.from(inputs).indexOf(nameInput);
-    if (index < inputs.length - 1) {
-      inputs[index + 1].focus();
-    }
-  }
-});
+    
+    nameInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const inputs = document.querySelectorAll(".player-name");
+        const index = Array.from(inputs).indexOf(nameInput);
+        if (index < inputs.length - 1) {
+          inputs[index + 1].focus();
+        }
+      }
+    });
+
     const activeInput = document.createElement("input");
     activeInput.type = "checkbox";
     activeInput.checked = p.active;
