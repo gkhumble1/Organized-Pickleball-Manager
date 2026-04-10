@@ -415,12 +415,18 @@ function saveWL() {
 
 function openResultsModal() {
   const modal = $("resultsModal");
-  const select = $("winnerTeamSelect");
-  const container = $("courtResultsContainer");
-  if (!modal || !select || !container) return;
+  const body = $("resultsModalBody");
+  if (!modal || !body) return;
 
-  select.innerHTML = "";
-  container.innerHTML = "";
+  // Clear old content
+  body.innerHTML = "";
+
+  // Build a simple select for winners
+  const label = document.createElement("label");
+  label.textContent = "Which team won this round?";
+
+  const select = document.createElement("select");
+  select.id = "winnerTeamSelect";
 
   courts.forEach((court, index) => {
     const opt1 = document.createElement("option");
@@ -434,51 +440,42 @@ function openResultsModal() {
     select.appendChild(opt2);
   });
 
+  label.appendChild(select);
+  body.appendChild(label);
+
   modal.classList.remove("hidden");
 }
 
 function closeResultsModal() {
   const modal = $("resultsModal");
-  if (!modal) return;
-  modal.classList.add("hidden");
+  if (modal) modal.classList.add("hidden");
 }
 
 function saveResults() {
   const select = $("winnerTeamSelect");
-  if (!select) {
-    closeResultsModal();
-    return;
-  }
+  if (!select) return closeResultsModal();
+
   const value = select.value;
-  if (!value) {
-    closeResultsModal();
-    return;
-  }
+  if (!value) return closeResultsModal();
 
   const match = value.match(/^court(\d+)-team(\d+)$/);
-  if (!match) {
-    closeResultsModal();
-    return;
-  }
+  if (!match) return closeResultsModal();
 
   const courtIndex = parseInt(match[1], 10);
   const teamNumber = parseInt(match[2], 10);
 
   const court = courts[courtIndex];
-  if (!court) {
-    closeResultsModal();
-    return;
-  }
+  if (!court) return closeResultsModal();
 
-  const winningTeamIds = teamNumber === 1 ? court.team1 : court.team2;
-  const losingTeamIds = teamNumber === 1 ? court.team2 : court.team1;
+  const winners = teamNumber === 1 ? court.team1 : court.team2;
+  const losers = teamNumber === 1 ? court.team2 : court.team1;
 
   players.forEach((p) => {
-    if (winningTeamIds.includes(p.id)) {
+    if (winners.includes(p.id)) {
       p.wins += 1;
       p.seasonWins += 1;
       p.seasonGames += 1;
-    } else if (losingTeamIds.includes(p.id)) {
+    } else if (losers.includes(p.id)) {
       p.losses += 1;
       p.seasonLosses += 1;
       p.seasonGames += 1;
