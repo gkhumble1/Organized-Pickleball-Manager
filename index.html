@@ -36,7 +36,7 @@
         <button id="resetAllBtn" class="danger">Reset Everything</button>
       </div>
 
-      <!-- NEW: Choose Roster section -->
+      <!-- Roster tools -->
       <div class="summary-card">
         <h3>Choose Roster</h3>
         <p class="panel-subtitle">Save and reuse player lists with stats on this device.</p>
@@ -56,6 +56,13 @@
         </div>
       </div>
 
+      <!-- Cloud season tools -->
+      <div class="summary-card">
+        <h3>Season Cloud</h3>
+        <p class="panel-subtitle">Load shared season stats (names, games, wins, losses) from GitHub.</p>
+        <button id="loadSeasonCloudBtn" class="secondary">Load Season From Cloud</button>
+      </div>
+
       <h3>Stats</h3>
       <div class="stats-table-wrapper">
         <table class="stats-table">
@@ -67,7 +74,8 @@
               <th>Rest</th>
               <th>W</th>
               <th>L</th>
-              <th></th>
+              <th>Edit</th>
+              <th>Delete</th>
             </tr>
           </thead>
           <tbody id="statsTableBody"></tbody>
