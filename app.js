@@ -241,6 +241,34 @@ async function loadSeasonFromCloud() {
       alert("Could not load cloud season stats. File not found or network issue.");
       return;
     }
+    async function saveSeasonToCloud() {
+  const snapshot = {
+    players: players.map(p => ({
+      id: p.id,
+      name: p.name,
+      games: p.games,
+      wins: p.wins,
+      losses: p.losses
+    }))
+  };
+
+  try {
+    const response = await fetch("/.netlify/functions/saveSeason", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(snapshot)
+    });
+
+    if (!response.ok) {
+      alert("Failed to save season to cloud.");
+      return;
+    }
+
+    alert("Season saved to cloud!");
+  } catch (err) {
+    alert("Error saving season to cloud.");
+  }
+}
 
     const snapshot = await response.json();
     applySeasonSnapshot(snapshot);
@@ -1054,6 +1082,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("closeResultsModal").addEventListener("click", closeResultsModal);
   $("cancelResultsBtn").addEventListener("click", closeResultsModal);
   $("saveResultsBtn").addEventListener("click", saveResults);
+  $("saveSeasonCloudBtn").addEventListener("click", saveSeasonToCloud);
 
   $("closeEditWLModal").addEventListener("click", closeEditWLModal);
   $("cancelWLBtn").addEventListener("click", closeEditWLModal);
