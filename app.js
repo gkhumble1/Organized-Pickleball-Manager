@@ -214,7 +214,6 @@ function renderCourts() {
     container.appendChild(card);
   });
 }
-}
 
 // --- Summary & Needs to Play ----------------------------------------------
 
