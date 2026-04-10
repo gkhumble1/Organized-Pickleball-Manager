@@ -69,6 +69,8 @@ function loadState() {
 
 const $ = (id) => document.getElementById(id);
 
+// --- Rendering: Players, Stats, Courts ------------------------------------
+
 function renderPlayersList() {
   const container = $("playersList");
   if (!container) return;
@@ -411,7 +413,7 @@ function saveWL() {
   closeEditWLModal();
 }
 
-// --- Results Modal ---------------------------------------------------------
+// --- Results Modal (advanced, clean) --------------------------------------
 
 function openResultsModal() {
   const modal = $("resultsModal");
@@ -424,7 +426,7 @@ function openResultsModal() {
   select.innerHTML = "";
   container.innerHTML = "";
 
-  // Build options for each court/team
+  // Build options and show court breakdown
   courts.forEach((court, index) => {
     const opt1 = document.createElement("option");
     opt1.value = `court${index}-team1`;
@@ -436,18 +438,27 @@ function openResultsModal() {
     opt2.textContent = `Court ${index + 1} - Team 2`;
     select.appendChild(opt2);
 
-    // Display court teams inside modal
     const courtDiv = document.createElement("div");
     courtDiv.className = "court-result-block";
 
+    const team1Names = court.team1
+      .map(id => {
+        const p = players.find(pl => pl.id === id);
+        return p ? p.name : `#${id}`;
+      })
+      .join(", ");
+
+    const team2Names = court.team2
+      .map(id => {
+        const p = players.find(pl => pl.id === id);
+        return p ? p.name : `#${id}`;
+      })
+      .join(", ");
+
     courtDiv.innerHTML = `
       <h4>Court ${index + 1}</h4>
-      <p><strong>Team 1:</strong> ${
-        court.team1.map(id => players.find(p => p.id === id).name).join(", ")
-      }</p>
-      <p><strong>Team 2:</strong> ${
-        court.team2.map(id => players.find(p => p.id === id).name).join(", ")
-      }</p>
+      <p><strong>Team 1:</strong> ${team1Names}</p>
+      <p><strong>Team 2:</strong> ${team2Names}</p>
     `;
 
     container.appendChild(courtDiv);
@@ -546,9 +557,11 @@ function initTheme() {
   const saved = localStorage.getItem("pickleball_theme");
   if (saved === "dark") {
     document.body.classList.add("dark-mode");
+    document.body.classList.remove("light-mode");
     $("themeIcon").textContent = "🌙";
   } else {
     document.body.classList.add("light-mode");
+    document.body.classList.remove("dark-mode");
     $("themeIcon").textContent = "🌞";
   }
 }
@@ -574,40 +587,48 @@ document.getElementById("savePlayersBtn").addEventListener("click", async () => 
   const names = players.map((p) => p.name.trim());
   const rosterJson = JSON.stringify({ players: names });
 
-  await fetch(
-    "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/update-roster.yml/dispatches",
-    {
-      method: "POST",
-      headers: {
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ref: "main",
-        inputs: { roster: rosterJson },
-      }),
-    }
-  );
+  try {
+    await fetch(
+      "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/update-roster.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ref: "main",
+          inputs: { roster: rosterJson },
+        }),
+      }
+    );
 
-  alert("Players saved! The roster will update shortly.");
+    alert("Players saved! The roster will update shortly.");
+  } catch (e) {
+    alert("Error triggering GitHub workflow.");
+  }
 });
 
 document.getElementById("loadPlayersBtn").addEventListener("click", async () => {
-  const response = await fetch("players.json");
-  const data = await response.json();
-  const names = data.players || [];
+  try {
+    const response = await fetch("players.json");
+    const data = await response.json();
+    const names = data.players || [];
 
-  players.forEach((p, i) => {
-    p.name = names[i] || "";
-  });
+    players.forEach((p, i) => {
+      p.name = names[i] || "";
+    });
 
-  saveState();
-  renderPlayersList();
-  renderStatsTable();
-  renderSummary();
-  renderNeedsToPlay();
+    saveState();
+    renderPlayersList();
+    renderStatsTable();
+    renderSummary();
+    renderNeedsToPlay();
 
-  alert("Saved players loaded!");
+    alert("Saved players loaded!");
+  } catch (e) {
+    alert("Error loading saved players.");
+  }
 });
 
 // --- Save Roster As… -------------------------------------------------------
@@ -630,25 +651,29 @@ document.getElementById("saveRosterBtn").addEventListener("click", async () => {
     }))
   };
 
-  await fetch(
-    "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/save-roster.yml/dispatches",
-    {
-      method: "POST",
-      headers: {
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ref: "main",
-        inputs: {
-          roster_name: rosterName,
-          roster_json: JSON.stringify(rosterData)
-        }
-      }),
-    }
-  );
+  try {
+    await fetch(
+      "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/save-roster.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ref: "main",
+          inputs: {
+            roster_name: rosterName,
+            roster_json: JSON.stringify(rosterData)
+          }
+        }),
+      }
+    );
 
-  alert("Roster saved! It will appear in .rosters shortly.");
+    alert("Roster saved! It will appear in .rosters shortly.");
+  } catch (e) {
+    alert("Error triggering roster save workflow.");
+  }
 });
 
 // --- Load Roster -----------------------------------------------------------
@@ -714,22 +739,26 @@ document.getElementById("deleteRosterBtn").addEventListener("click", async () =>
     return;
   }
 
-  await fetch(
-    "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/delete-roster.yml/dispatches",
-    {
-      method: "POST",
-      headers: {
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ref: "main",
-        inputs: { roster_name: rosterName }
-      }),
-    }
-  );
+  try {
+    await fetch(
+      "https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/delete-roster.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ref: "main",
+          inputs: { roster_name: rosterName }
+        }),
+      }
+    );
 
-  alert("Roster deleted (if it existed).");
+    alert("Roster deleted (if it existed).");
+  } catch (e) {
+    alert("Error triggering roster delete workflow.");
+  }
 });
 
 // --- Randomize / Reset helpers --------------------------------------------
@@ -783,77 +812,6 @@ function resetEverything() {
   renderNeedsToPlay();
   updateTimerDisplay();
 }
-// --- Results Modal ---------------------------------------------------------
-
-function openResultsModal() {
-  const modal = $("resultsModal");
-  const select = $("winnerTeamSelect");
-  const container = $("courtResultsContainer");
-
-  if (!modal || !select || !container) return;
-
-  // Clear old content
-  select.innerHTML = "";
-  container.innerHTML = "";
-
-  // Build options for each court/team
-  courts.forEach((court, index) => {
-    const opt1 = document.createElement("option");
-    opt1.value = `court${index}-team1`;
-    opt1.textContent = `Court ${index + 1} - Team 1`;
-    select.appendChild(opt1);
-
-    const opt2 = document.createElement("option");
-    opt2.value = `court${index}-team2`;
-    opt2.textContent = `Court ${index + 1} - Team 2`;
-    select.appendChild(opt2);
-  });
-
-  modal.classList.remove("hidden");
-}
-
-function closeResultsModal() {
-  const modal = $("resultsModal");
-  if (modal) modal.classList.add("hidden");
-}
-
-function saveResults() {
-  const select = $("winnerTeamSelect");
-  if (!select) return closeResultsModal();
-
-  const value = select.value;
-  if (!value) return closeResultsModal();
-
-  const match = value.match(/^court(\d+)-team(\d+)$/);
-  if (!match) return closeResultsModal();
-
-  const courtIndex = parseInt(match[1], 10);
-  const teamNumber = parseInt(match[2], 10);
-
-  const court = courts[courtIndex];
-  if (!court) return closeResultsModal();
-
-  const winners = teamNumber === 1 ? court.team1 : court.team2;
-  const losers = teamNumber === 1 ? court.team2 : court.team1;
-
-  players.forEach((p) => {
-    if (winners.includes(p.id)) {
-      p.wins += 1;
-      p.seasonWins += 1;
-      p.seasonGames += 1;
-    } else if (losers.includes(p.id)) {
-      p.losses += 1;
-      p.seasonLosses += 1;
-      p.seasonGames += 1;
-    }
-  });
-
-  saveState();
-  renderStatsTable();
-  renderSummary();
-  renderNeedsToPlay();
-  closeResultsModal();
-}
 
 // --- Init ------------------------------------------------------------------
 
@@ -888,4 +846,3 @@ window.addEventListener("DOMContentLoaded", () => {
   $("resetTimerBtn").addEventListener("click", resetTimer);
   $("timerDuration").addEventListener("change", resetTimer);
 });
-
