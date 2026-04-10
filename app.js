@@ -840,12 +840,26 @@ document.getElementById("savePlayersBtn").addEventListener("click", async () => 
         }
     });
 
-    const data = { players };
-  
+    const rosterJson = JSON.stringify({ players });
+
+    await fetch("https://api.github.com/repos/gkhumble1/Organized-Pickleball-Manager/actions/workflows/update-roster.yml/dispatches", {
+        method: "POST",
+        headers: {
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + "<YOUR_SECRET_TOKEN>"
+        },
+        body: JSON.stringify({
+            ref: "main",
+            inputs: {
+                roster: rosterJson
+            }
+        })
     });
 
     alert("Players saved! The roster will update in a few seconds.");
 });
+
 
 document.getElementById("loadPlayersBtn").addEventListener("click", async () => {
     const response = await fetch("players.json");
