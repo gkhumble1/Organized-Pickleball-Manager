@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body class="light-mode">
   <header class="app-header">
     <div class="app-title">
@@ -18,64 +19,74 @@
   </header>
 
   <main class="layout">
-    <!-- LEFT: Players & Controls -->
+
+    <!-- LEFT PANEL -->
     <section class="panel panel-left">
-      <div class="roster-section">
-  <h3>Roster</h3>
-  <input id="rosterNameInput" type="text" placeholder="Enter roster name..." />
 
-  <button id="saveRosterBtn">Save Roster As…</button>
-  <button id="loadRosterBtn">Load Roster</button>
-  <button id="deleteRosterBtn" class="danger">Delete Roster</button>
-</div>
-      <h2>Players</h2>
-      <p class="panel-subtitle">Fixed numbers · names saved · stats tracked</p>
-
-      <div class="players-header-row">
-        <span>#</span>
-        <span>Name</span>
-        <span>Active</span>
-      </div>
-      <div id="playersList" class="players-list"></div>
-
-      <div class="panel-actions">
-        <button id="randomizeOrderBtn">Randomize Starting Order</button>
-        <button id="savePlayersBtn">Save Players to Website</button>
-        <button id="loadPlayersBtn">Load Saved Players</button>
-        <button id="resetSessionBtn" class="secondary">Reset Session (keep names)</button>
-        <button id="resetAllBtn" class="danger">Reset Everything</button>
+      <div class="roster-section card">
+        <h3>Roster</h3>
+        <input id="rosterNameInput" type="text" placeholder="Enter roster name..." />
+        <button id="saveRosterBtn">Save Roster As…</button>
+        <button id="loadRosterBtn">Load Roster</button>
+        <button id="deleteRosterBtn" class="danger">Delete Roster</button>
       </div>
 
-      <h3>Stats</h3>
-      <div class="stats-table-wrapper">
-        <table class="stats-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>G</th>
-              <th>Rest</th>
-              <th>W</th>
-              <th>L</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="statsTableBody"></tbody>
-        </table>
+      <div class="card">
+        <h2>Players</h2>
+        <p class="panel-subtitle">Fixed numbers · names saved · stats tracked</p>
+
+        <div class="players-header-row">
+          <span>#</span>
+          <span>Name</span>
+          <span>Active</span>
+        </div>
+
+        <div id="playersList" class="players-list"></div>
+
+        <div class="panel-actions">
+          <button id="randomizeOrderBtn">Randomize Starting Order</button>
+          <button id="savePlayersBtn">Save Players to Website</button>
+          <button id="loadPlayersBtn">Load Saved Players</button>
+          <button id="resetSessionBtn" class="secondary">Reset Session (keep names)</button>
+          <button id="resetAllBtn" class="danger">Reset Everything</button>
+        </div>
       </div>
+
+      <div class="card">
+        <h3>Stats</h3>
+        <div class="stats-table-wrapper">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>G</th>
+                <th>Rest</th>
+                <th>W</th>
+                <th>L</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="statsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
     </section>
 
-    <!-- CENTER: Courts & Timer -->
+    <!-- CENTER PANEL -->
     <section class="panel panel-center">
-      <div class="panel-header-row">
-        <h2>Courts</h2>
-        <button id="nextRoundBtn">Generate Next Round</button>
+
+      <div class="card">
+        <div class="panel-header-row">
+          <h2>Courts</h2>
+          <button id="nextRoundBtn">Generate Next Round</button>
+        </div>
+        <p class="panel-subtitle">Max 3 courts · auto-adjust based on active players</p>
+        <div id="courtsContainer" class="courts-container"></div>
       </div>
-      <p class="panel-subtitle">Max 3 courts · auto-adjust based on active players</p>
 
-      <div id="courtsContainer" class="courts-container"></div>
-
-      <div class="timer-section">
+      <div class="card timer-section">
         <h3>Round Timer</h3>
         <div class="timer-controls">
           <select id="timerDuration">
@@ -90,60 +101,63 @@
         </div>
       </div>
 
-      <div class="round-actions">
+      <div class="card round-actions">
         <button id="recordResultsBtn" class="primary">Record Round Results</button>
         <button id="undoBtn" class="secondary">Undo Last Round</button>
       </div>
+
     </section>
 
-    <!-- RIGHT: Insights & Details -->
+    <!-- RIGHT PANEL -->
     <section class="panel panel-right">
-      <h2>Session Insights</h2>
 
-      <div class="summary-card">
+      <div class="card">
+        <h2>Session Insights</h2>
         <h3>Session Summary</h3>
         <ul id="sessionSummary" class="summary-list"></ul>
       </div>
 
-      <div class="summary-card">
+      <div class="card">
         <h3>Needs to Play Next</h3>
         <ul id="needsToPlayList" class="summary-list"></ul>
       </div>
 
-      <div class="summary-card">
+      <div class="card">
         <h3>Player Details</h3>
         <p class="panel-subtitle">Click a player row in the stats table to view details.</p>
         <div id="playerDetails" class="player-details">
           <p>No player selected.</p>
         </div>
       </div>
+
     </section>
+
   </main>
 
- <!-- Modal: Record Round Results -->
-<div id="resultsModal" class="modal hidden">
-  <div class="modal-backdrop"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Record Round Results</h2>
-      <button id="closeResultsModal" class="icon-button">✕</button>
-    </div>
+  <!-- ADVANCED RESULTS MODAL -->
+  <div id="resultsModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Record Round Results</h2>
+        <button id="closeResultsModal" class="icon-button">✕</button>
+      </div>
 
-    <div class="modal-body">
-      <label for="winnerTeamSelect">Select winning team:</label>
-      <select id="winnerTeamSelect"></select>
+      <div class="modal-body">
+        <label for="winnerTeamSelect">Select winning team:</label>
+        <select id="winnerTeamSelect"></select>
 
-      <div id="courtResultsContainer" class="results-container"></div>
-    </div>
+        <div id="courtResultsContainer" class="results-container"></div>
+      </div>
 
-    <div class="modal-footer">
-      <button id="saveResultsBtn" class="primary">Save Results</button>
-      <button id="cancelResultsBtn" class="secondary">Cancel</button>
+      <div class="modal-footer">
+        <button id="saveResultsBtn" class="primary">Save Results</button>
+        <button id="cancelResultsBtn" class="secondary">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
 
-  <!-- Modal: Edit Wins/Losses -->
+  <!-- EDIT WINS/LOSSES MODAL -->
   <div id="editWLModal" class="modal hidden">
     <div class="modal-backdrop"></div>
     <div class="modal-content">
@@ -153,14 +167,8 @@
       </div>
       <div class="modal-body">
         <p id="editWLPlayerName"></p>
-        <label>
-          Wins:
-          <input type="number" id="editWinsInput" min="0" />
-        </label>
-        <label>
-          Losses:
-          <input type="number" id="editLossesInput" min="0" />
-        </label>
+        <label>Wins: <input type="number" id="editWinsInput" min="0" /></label>
+        <label>Losses: <input type="number" id="editLossesInput" min="0" /></label>
       </div>
       <div class="modal-footer">
         <button id="saveWLBtn" class="primary">Save</button>
