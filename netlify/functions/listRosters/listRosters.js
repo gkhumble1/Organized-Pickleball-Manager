@@ -3,7 +3,7 @@ const repo = "Organized-Pickleball-Manager";
 const folder = "cloud-rosters";
 
 export async function handler() {
-  try, {
+  try {
     const token = process.env.GITHUB_TOKEN;
     if (!token) {
       return { statusCode: 500, body: "Missing GITHUB_TOKEN" };
