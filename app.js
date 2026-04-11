@@ -56,7 +56,7 @@ function loadState() {
   }
 }
 
-// --- Roster persistence ----------------------------------------------------
+// --- Roster persistence (local) -------------------------------------------
 
 function loadRostersMap() {
   try {
@@ -194,38 +194,32 @@ function applySeasonSnapshot(snapshot) {
     return;
   }
 
-  // Apply season stats to each player
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
     const snap = snapshot.players[i];
 
     if (!snap) continue;
 
-    // Season stats
     p.name = snap.name || "";
     p.games = snap.games || 0;
     p.wins = snap.wins || 0;
     p.losses = snap.losses || 0;
 
-    // Reset session stats
     p.rest = 0;
     p.partners = {};
     p.opponents = {};
   }
 
-  // Reset session-wide state
   courts = [];
   historyStack = [];
   currentRoundId = 0;
 
-  // Save + re-render everything
   saveState();
   renderPlayersList();
   renderStatsTable();
   renderCourts();
   renderSummary();
   renderNeedsToPlay();
-
   $("playerDetails").innerHTML = "<p>No player selected.</p>";
 
   alert("Season stats loaded from cloud.");
@@ -233,7 +227,8 @@ function applySeasonSnapshot(snapshot) {
 
 async function loadSeasonFromCloud() {
   try {
-    const url = "https://raw.githubusercontent.com/gkhumble1/Organized-Pickleball-Manager/main/shared-season-stats.json";
+    const url =
+      "https://raw.githubusercontent.com/gkhumble1/Organized-Pickleball-Manager/main/shared-season-stats.json";
 
     const response = await fetch(url + "?t=" + Date.now()); // prevent caching
 
@@ -241,22 +236,31 @@ async function loadSeasonFromCloud() {
       alert("Could not load cloud season stats. File not found or network issue.");
       return;
     }
-    async function saveSeasonToCloud() {
+
+    const snapshot = await response.json();
+    applySeasonSnapshot(snapshot);
+  } catch (err) {
+    console.error(err);
+    alert("Error loading season stats from cloud.");
+  }
+}
+
+async function saveSeasonToCloud() {
   const snapshot = {
-    players: players.map(p => ({
+    players: players.map((p) => ({
       id: p.id,
       name: p.name,
       games: p.games,
       wins: p.wins,
-      losses: p.losses
-    }))
+      losses: p.losses,
+    })),
   };
 
   try {
     const response = await fetch("/.netlify/functions/saveSeason", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(snapshot)
+      body: JSON.stringify(snapshot),
     });
 
     if (!response.ok) {
@@ -270,11 +274,187 @@ async function loadSeasonFromCloud() {
   }
 }
 
-    const snapshot = await response.json();
-    applySeasonSnapshot(snapshot);
+// --- Cloud rosters (GitHub via Netlify) -----------------------------------
+
+async function refreshCloudRosterList() {
+  try {
+    const select = $("cloudRosterSelect");
+    if (!select) return;
+
+    select.innerHTML = '<option value="">(No cloud roster selected)</option>';
+
+    const response = await fetch("/.netlify/functions/listRosters");
+    if (!response.ok) {
+      alert("Could not list cloud rosters.");
+      return;
+    }
+
+    const data = await response.json();
+    const rosters = data.rosters || [];
+
+    rosters.sort().forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
   } catch (err) {
     console.error(err);
-    alert("Error loading season stats from cloud.");
+    alert("Error listing cloud rosters.");
+  }
+}
+
+async function saveCurrentRosterToCloud() {
+  const defaultName = $("cloudRosterSelect")?.value || "";
+  const rosterName = prompt(
+    "Enter a name for this cloud roster:",
+    defaultName || "New Cloud Roster"
+  );
+  if (!rosterName) return;
+
+  const snapshot = players.map((p) => ({
+    name: p.name,
+    games: p.games,
+    rest: p.rest,
+    wins: p.wins,
+    losses: p.losses,
+  }));
+
+  try {
+    const response = await fetch("/.netlify/functions/saveRoster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: rosterName, snapshot }),
+    });
+
+    if (!response.ok) {
+      alert("Failed to save roster to cloud.");
+      return;
+    }
+
+    alert(`Cloud roster "${rosterName}" saved.`);
+    await refreshCloudRosterList();
+    $("cloudRosterSelect").value = rosterName;
+  } catch (err) {
+    console.error(err);
+    alert("Error saving roster to cloud.");
+  }
+}
+
+async function loadRosterFromCloud() {
+  const select = $("cloudRosterSelect");
+  if (!select) return;
+
+  const rosterName = select.value;
+  if (!rosterName) {
+    alert("Please select a cloud roster first.");
+    return;
+  }
+
+  if (!confirm(`Load cloud roster "${rosterName}"? This will update players and stats.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "/.netlify/functions/loadRoster?name=" + encodeURIComponent(rosterName)
+    );
+
+    if (!response.ok) {
+      alert("Failed to load roster from cloud.");
+      return;
+    }
+
+    const data = await response.json();
+    const snapshot = data.snapshot;
+    if (!snapshot || !Array.isArray(snapshot)) {
+      alert("Cloud roster file is invalid.");
+      return;
+    }
+
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      const snap = snapshot[i];
+
+      if (!snap || !snap.name) {
+        if (p.name) {
+          p.name = "";
+          p.games = 0;
+          p.rest = 0;
+          p.wins = 0;
+          p.losses = 0;
+          p.partners = {};
+          p.opponents = {};
+        }
+        continue;
+      }
+
+      if (p.name !== snap.name) {
+        p.name = snap.name;
+        p.games = snap.games || 0;
+        p.rest = snap.rest || 0;
+        p.wins = snap.wins || 0;
+        p.losses = snap.losses || 0;
+        p.partners = {};
+        p.opponents = {};
+      } else {
+        p.games = snap.games ?? p.games;
+        p.rest = snap.rest ?? p.rest;
+        p.wins = snap.wins ?? p.wins;
+        p.losses = snap.losses ?? p.losses;
+      }
+    }
+
+    courts = [];
+    historyStack = [];
+    currentRoundId = 0;
+
+    saveState();
+    renderPlayersList();
+    renderStatsTable();
+    renderCourts();
+    renderSummary();
+    renderNeedsToPlay();
+    $("playerDetails").innerHTML = "<p>No player selected.</p>";
+
+    alert(`Cloud roster "${rosterName}" loaded.`);
+  } catch (err) {
+    console.error(err);
+    alert("Error loading roster from cloud.");
+  }
+}
+
+async function deleteRosterFromCloud() {
+  const select = $("cloudRosterSelect");
+  if (!select) return;
+
+  const rosterName = select.value;
+  if (!rosterName) {
+    alert("Please select a cloud roster first.");
+    return;
+  }
+
+  if (!confirm(`Delete cloud roster "${rosterName}"? This cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch("/.netlify/functions/deleteRoster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: rosterName }),
+    });
+
+    if (!response.ok) {
+      alert("Failed to delete roster from cloud.");
+      return;
+    }
+
+    alert(`Cloud roster "${rosterName}" deleted.`);
+    await refreshCloudRosterList();
+  } catch (err) {
+    console.error(err);
+    alert("Error deleting roster from cloud.");
   }
 }
 
@@ -471,7 +651,9 @@ function renderCourts() {
       const tag = document.createElement("div");
       tag.className = "player-tag";
       const left = document.createElement("span");
-      left.innerHTML = `<span class="player-number">#${p.id}</span><span class="player-name">${p.name || "(empty)"}</span>`;
+      left.innerHTML = `<span class="player-number">#${p.id}</span><span class="player-name">${
+        p.name || "(empty)"
+      }</span>`;
       const right = document.createElement("span");
       right.className = "player-meta";
       right.textContent = `${p.games}G / ${p.wins}W`;
@@ -485,7 +667,9 @@ function renderCourts() {
       const tag = document.createElement("div");
       tag.className = "player-tag";
       const left = document.createElement("span");
-      left.innerHTML = `<span class="player-number">#${p.id}</span><span class="player-name">${p.name || "(empty)"}</span>`;
+      left.innerHTML = `<span class="player-number">#${p.id}</span><span class="player-name">${
+        p.name || "(empty)"
+      }</span>`;
       const right = document.createElement("span");
       right.className = "player-meta";
       right.textContent = `${p.games}G / ${p.wins}W`;
@@ -591,9 +775,17 @@ function renderPlayerDetails(playerId) {
     <p><strong>Losses:</strong> ${p.losses}</p>
     <p><strong>Win %:</strong> ${winPct}</p>
     <p><strong>Partners:</strong></p>
-    <ul>${partners.length ? partners.map((x) => `<li>${x}</li>`).join("") : "<li>None yet</li>"}</ul>
+    <ul>${
+      partners.length
+        ? partners.map((x) => `<li>${x}</li>`).join("")
+        : "<li>None yet</li>"
+    }</ul>
     <p><strong>Opponents:</strong></p>
-    <ul>${opponents.length ? opponents.map((x) => `<li>${x}</li>`).join("") : "<li>None yet</li>"}</ul>
+    <ul>${
+      opponents.length
+        ? opponents.map((x) => `<li>${x}</li>`).join("")
+        : "<li>None yet</li>"
+    }</ul>
   `;
 }
 
@@ -603,7 +795,11 @@ function deletePlayer(playerId) {
   const p = players.find((x) => x.id === playerId);
   if (!p) return;
 
-  if (!confirm(`Delete player #${p.id} "${p.name || ""}" for this season? This clears their name and stats.`)) {
+  if (
+    !confirm(
+      `Delete player #${p.id} "${p.name || ""}" for this season? This clears their name and stats.`
+    )
+  ) {
     return;
   }
 
@@ -1023,7 +1219,11 @@ function randomizeOrder() {
 }
 
 function resetSessionKeepNames() {
-  if (!confirm("Reset session stats (games, rest, partners, opponents) but keep names and wins/losses?")) {
+  if (
+    !confirm(
+      "Reset session stats (games, rest, partners, opponents) but keep names and wins/losses?"
+    )
+  ) {
     return;
   }
   players.forEach((p) => {
@@ -1043,7 +1243,9 @@ function resetSessionKeepNames() {
 }
 
 function resetEverything() {
-  if (!confirm("Reset EVERYTHING (names, stats, wins, losses, history)?")) {
+  if (
+    !confirm("Reset EVERYTHING (names, stats, wins, losses, history)?")
+  ) {
     return;
   }
   localStorage.removeItem(STORAGE_KEY);
@@ -1074,6 +1276,7 @@ window.addEventListener("DOMContentLoaded", () => {
   updateTimerDisplay();
 
   refreshRosterSelect();
+  refreshCloudRosterList();
 
   $("themeToggle").addEventListener("click", toggleTheme);
   $("nextRoundBtn").addEventListener("click", generateNextRound);
@@ -1082,33 +1285,27 @@ window.addEventListener("DOMContentLoaded", () => {
   $("closeResultsModal").addEventListener("click", closeResultsModal);
   $("cancelResultsBtn").addEventListener("click", closeResultsModal);
   $("saveResultsBtn").addEventListener("click", saveResults);
-  $("saveSeasonCloudBtn").addEventListener("click", saveSeasonToCloud);
-
-  $("closeEditWLModal").addEventListener("click", closeEditWLModal);
-  $("cancelWLBtn").addEventListener("click", closeEditWLModal);
-  $("saveWLBtn").addEventListener("click", saveWL);
 
   $("randomizeOrderBtn").addEventListener("click", randomizeOrder);
   $("resetSessionBtn").addEventListener("click", resetSessionKeepNames);
   $("resetAllBtn").addEventListener("click", resetEverything);
 
+  $("saveSeasonCloudBtn").addEventListener("click", saveSeasonToCloud);
+  $("loadSeasonCloudBtn").addEventListener("click", loadSeasonFromCloud);
+
+  $("saveRosterBtn").addEventListener("click", saveCurrentRosterAs);
+  $("loadRosterBtn").addEventListener("click", loadRosterFromSelect);
+
+  $("saveCloudRosterBtn").addEventListener("click", saveCurrentRosterToCloud);
+  $("loadCloudRosterBtn").addEventListener("click", loadRosterFromCloud);
+  $("deleteCloudRosterBtn").addEventListener("click", deleteRosterFromCloud);
+  $("refreshCloudRosterBtn").addEventListener("click", refreshCloudRosterList);
+
+  $("closeEditWLModal").addEventListener("click", closeEditWLModal);
+  $("cancelWLBtn").addEventListener("click", closeEditWLModal);
+  $("saveWLBtn").addEventListener("click", saveWL);
+
   $("startTimerBtn").addEventListener("click", startTimer);
   $("pauseTimerBtn").addEventListener("click", pauseTimer);
   $("resetTimerBtn").addEventListener("click", resetTimer);
-  $("timerDuration").addEventListener("change", resetTimer);
-
-  const saveRosterBtn = $("saveRosterBtn");
-  if (saveRosterBtn) {
-    saveRosterBtn.addEventListener("click", saveCurrentRosterAs);
-  }
-
-  const loadRosterFromSelectBtn = $("loadRosterFromSelectBtn");
-  if (loadRosterFromSelectBtn) {
-    loadRosterFromSelectBtn.addEventListener("click", loadRosterFromSelect);
-  }
-
-  const loadSeasonCloudBtn = $("loadSeasonCloudBtn");
-  if (loadSeasonCloudBtn) {
-    loadSeasonCloudBtn.addEventListener("click", loadSeasonFromCloud);
-  }
 });
