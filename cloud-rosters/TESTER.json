@@ -1,142 +1,142 @@
 [
   {
     "name": "AMAN",
-    "games": 0,
+    "games": 3,
     "rest": 0,
-    "wins": 0,
-    "losses": 0
+    "wins": 1,
+    "losses": 1
   },
   {
     "name": "ELSA",
-    "games": 0,
+    "games": 3,
     "rest": 0,
     "wins": 0,
-    "losses": 0
+    "losses": 2
   },
   {
     "name": "WHITNEY",
-    "games": 0,
+    "games": 3,
     "rest": 0,
-    "wins": 0,
+    "wins": 2,
     "losses": 0
   },
   {
     "name": "CYNTHIA",
-    "games": 0,
+    "games": 3,
     "rest": 0,
-    "wins": 0,
-    "losses": 0
+    "wins": 1,
+    "losses": 1
   },
   {
     "name": "MARIYAM",
-    "games": 0,
+    "games": 3,
     "rest": 0,
-    "wins": 0,
-    "losses": 0
+    "wins": 1,
+    "losses": 1
   },
   {
     "name": "KUNA",
-    "games": 0,
+    "games": 3,
     "rest": 0,
-    "wins": 0,
+    "wins": 2,
     "losses": 0
   },
   {
     "name": "SHIKHA",
-    "games": 0,
+    "games": 3,
     "rest": 0,
     "wins": 0,
-    "losses": 0
+    "losses": 2
   },
   {
     "name": "RICHARD",
-    "games": 0,
+    "games": 3,
     "rest": 0,
-    "wins": 0,
-    "losses": 0
+    "wins": 1,
+    "losses": 1
   },
   {
     "name": "ADAM",
-    "games": 0,
-    "rest": 0,
-    "wins": 0,
-    "losses": 0
+    "games": 2,
+    "rest": 1,
+    "wins": 1,
+    "losses": 1
   },
   {
     "name": "JJ",
-    "games": 0,
-    "rest": 0,
+    "games": 2,
+    "rest": 1,
     "wins": 0,
-    "losses": 0
+    "losses": 2
   },
   {
     "name": "JALENCIA",
-    "games": 0,
-    "rest": 0,
-    "wins": 0,
+    "games": 2,
+    "rest": 1,
+    "wins": 2,
     "losses": 0
   },
   {
     "name": "MEELO",
-    "games": 0,
-    "rest": 0,
-    "wins": 0,
-    "losses": 0
+    "games": 2,
+    "rest": 1,
+    "wins": 1,
+    "losses": 1
   },
   {
     "name": "WANDA",
-    "games": 0,
-    "rest": 0,
-    "wins": 0,
+    "games": 2,
+    "rest": 1,
+    "wins": 2,
     "losses": 0
   },
   {
     "name": "DEQUAN",
-    "games": 0,
-    "rest": 0,
-    "wins": 0,
-    "losses": 0
+    "games": 2,
+    "rest": 1,
+    "wins": 1,
+    "losses": 1
   },
   {
     "name": "STICKY",
-    "games": 0,
-    "rest": 0,
-    "wins": 0,
-    "losses": 0
+    "games": 2,
+    "rest": 1,
+    "wins": 1,
+    "losses": 1
   },
   {
     "name": "AMAR",
-    "games": 0,
-    "rest": 0,
+    "games": 2,
+    "rest": 1,
     "wins": 0,
-    "losses": 0
+    "losses": 2
   },
   {
     "name": "LIAM",
-    "games": 0,
+    "games": 2,
     "rest": 0,
     "wins": 0,
-    "losses": 0
+    "losses": 1
   },
   {
     "name": "AUSTIN",
-    "games": 0,
+    "games": 2,
     "rest": 0,
     "wins": 0,
-    "losses": 0
+    "losses": 1
   },
   {
     "name": "CARLOS",
-    "games": 0,
+    "games": 2,
     "rest": 0,
-    "wins": 0,
+    "wins": 1,
     "losses": 0
   },
   {
     "name": "NICOLE",
-    "games": 0,
+    "games": 2,
     "rest": 0,
-    "wins": 0,
+    "wins": 1,
     "losses": 0
   }
 ]
