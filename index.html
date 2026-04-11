@@ -38,7 +38,7 @@
 
       <!-- Local roster tools -->
       <div class="summary-card">
-        <h3>Choose Roster</h3>
+        <h3>Local Rosters</h3>
         <p class="panel-subtitle">Save and reuse player lists with stats on this device.</p>
 
         <div class="roster-tools">
@@ -51,36 +51,33 @@
 
           <div class="roster-buttons">
             <button id="saveRosterBtn">Save Roster As…</button>
-            <button id="loadRosterBtn" class="secondary">Load Selected</button>
+            <button id="loadRosterFromSelectBtn" class="secondary">Load Selected</button>
           </div>
         </div>
       </div>
 
-      <!-- Season cloud tools -->
-      <div class="summary-card">
-        <h3>Season Cloud</h3>
-        <p class="panel-subtitle">Load shared season stats (names, games, wins, losses) from GitHub.</p>
-        <button id="loadSeasonCloudBtn" class="secondary">Load Season From Cloud</button>
-        <button id="saveSeasonCloudBtn" class="primary">Save Season To Cloud</button>
-      </div>
-
       <!-- Cloud roster tools -->
       <div class="summary-card">
-        <h3>Select Roster</h3>
-        <p class="panel-subtitle">Cloud rosters saved in GitHub (multi‑device).</p>
+        <h3>Cloud Rosters</h3>
+        <p class="panel-subtitle">Share rosters across devices via Netlify function.</p>
 
-        <label for="cloudRosterSelect" class="roster-label">
-          Select roster:
-        </label>
-        <select id="cloudRosterSelect" class="roster-select">
-          <option value="">(No cloud roster selected)</option>
-        </select>
+        <div class="roster-tools">
+          <label for="cloudRosterSelect" class="roster-label">
+            Cloud roster:
+          </label>
+          <select id="cloudRosterSelect" class="roster-select">
+            <option value="">(No cloud roster selected)</option>
+          </select>
 
-        <div class="roster-buttons">
-          <button id="saveCloudRosterBtn" class="primary">Save Current Roster To Cloud</button>
-          <button id="loadCloudRosterBtn" class="secondary">Load Selected Cloud Roster</button>
-          <button id="deleteCloudRosterBtn" class="danger">Delete Selected Cloud Roster</button>
-          <button id="refreshCloudRosterBtn" class="secondary">Refresh Cloud Roster List</button>
+          <div class="roster-buttons">
+            <button id="saveCloudRosterBtn">Save Current Roster To Cloud</button>
+            <button id="loadCloudRosterBtn" class="secondary">Load Selected Cloud Roster</button>
+            <button id="deleteCloudRosterBtn" class="danger">Delete Selected Cloud Roster</button>
+          </div>
+
+          <div class="roster-buttons">
+            <button id="refreshCloudRostersBtn" class="secondary">Refresh Cloud Roster List</button>
+          </div>
         </div>
       </div>
 
