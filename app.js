@@ -1,3 +1,22 @@
+// --- Cloudflare Worker URL ----------------------------------------------
+const WORKER_URL = "https://floral-silence-525b.mariyam-abdulkarim123.workers.dev";
+
+// Helper to call Worker endpoints
+async function workerGet(path) {
+  const res = await fetch(`${WORKER_URL}${path}`);
+  if (!res.ok) throw new Error(`Worker GET failed: ${path}`);
+  return res.json();
+}
+
+async function workerPost(path, body) {
+  const res = await fetch(`${WORKER_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Worker POST failed: ${path}`);
+  return res.json();
+}
 // --- Data model & persistence ----------------------------------------------
 
 const STORAGE_KEY = "pickleball_rotation_v1";
@@ -208,9 +227,7 @@ function loadRosterFromSelect() {
   alert(`Roster "${rosterName}" loaded.`);
 }
 
-// --- Cloud rosters (via Netlify function) ---------------------------------
-// NOTE: backend function expected at /.netlify/functions/rosters
-// with actions: list, save, load, delete
+// --- Cloud rosters (via Cloudflare Worker) ---------------------------------
 
 async function refreshCloudRosters() {
   const select = $("cloudRosterSelect");
@@ -219,20 +236,16 @@ async function refreshCloudRosters() {
   select.innerHTML = '<option value="">(No cloud roster selected)</option>';
 
   try {
-    const response = await fetch("/.netlify/functions/rosters?action=list");
-    if (!response.ok) {
-      console.error("Failed to list cloud rosters");
-      return;
-    }
-    const data = await response.json(); // expected: { rosters: ["name1", "name2", ...] }
-    (data.rosters || []).sort().forEach((name) => {
+    const list = await workerGet("/list");
+    list.sort().forEach((name) => {
       const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
+      opt.value = name.replace(".json", "");
+      opt.textContent = name.replace(".json", "");
       select.appendChild(opt);
     });
   } catch (err) {
     console.error(err);
+    alert("Failed to load cloud roster list.");
   }
 }
 
@@ -254,20 +267,10 @@ async function saveCurrentRosterToCloud() {
   }));
 
   try {
-    const response = await fetch("/.netlify/functions/rosters", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "save",
-        name: rosterName,
-        players: snapshot,
-      }),
+    await workerPost("/save", {
+      name: rosterName,
+      data: snapshot,
     });
-
-    if (!response.ok) {
-      alert("Failed to save roster to cloud.");
-      return;
-    }
 
     alert(`Cloud roster "${rosterName}" saved.`);
     await refreshCloudRosters();
@@ -293,31 +296,24 @@ async function loadSelectedCloudRoster() {
   }
 
   try {
-    const response = await fetch(`/.netlify/functions/rosters?action=load&name=${encodeURIComponent(rosterName)}`);
-    if (!response.ok) {
-      alert("Failed to load cloud roster.");
-      return;
-    }
-    const data = await response.json(); // expected: { players: [...] }
-    const snapshot = data.players || [];
+    const data = await workerGet(`/load?name=${encodeURIComponent(rosterName)}`);
+    const snapshot = JSON.parse(data);
 
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
       const snap = snapshot[i];
 
       if (!snap || !snap.name) {
-        if (p.name) {
-          p.name = "";
-          p.active = false;
-          p.games = 0;
-          p.rest = 0;
-          p.wins = 0;
-          p.losses = 0;
-          p.dailyWins = 0;
-          p.dailyLosses = 0;
-          p.partners = {};
-          p.opponents = {};
-        }
+        p.name = "";
+        p.active = false;
+        p.games = 0;
+        p.rest = 0;
+        p.wins = 0;
+        p.losses = 0;
+        p.dailyWins = 0;
+        p.dailyLosses = 0;
+        p.partners = {};
+        p.opponents = {};
         continue;
       }
 
@@ -367,20 +363,7 @@ async function deleteSelectedCloudRoster() {
   }
 
   try {
-    const response = await fetch("/.netlify/functions/rosters", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "delete",
-        name: rosterName,
-      }),
-    });
-
-    if (!response.ok) {
-      alert("Failed to delete cloud roster.");
-      return;
-    }
-
+    await workerPost("/delete", { name: rosterName });
     alert(`Cloud roster "${rosterName}" deleted.`);
     await refreshCloudRosters();
   } catch (err) {
