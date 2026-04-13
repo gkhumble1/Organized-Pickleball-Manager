@@ -17,6 +17,7 @@ async function workerPost(path, body) {
   if (!res.ok) throw new Error(`Worker POST failed: ${path}`);
   return res.json();
 }
+
 // --- Data model & persistence ----------------------------------------------
 
 const STORAGE_KEY = "pickleball_rotation_v1";
@@ -226,7 +227,6 @@ function loadRosterFromSelect() {
 
   alert(`Roster "${rosterName}" loaded.`);
 }
-
 // --- Cloud rosters (via Cloudflare Worker) ---------------------------------
 
 async function refreshCloudRosters() {
@@ -238,9 +238,10 @@ async function refreshCloudRosters() {
   try {
     const list = await workerGet("/list");
     list.sort().forEach((name) => {
+      const clean = name.replace(".json", "");
       const opt = document.createElement("option");
-      opt.value = name.replace(".json", "");
-      opt.textContent = name.replace(".json", "");
+      opt.value = clean;
+      opt.textContent = clean;
       select.appendChild(opt);
     });
   } catch (err) {
@@ -296,8 +297,8 @@ async function loadSelectedCloudRoster() {
   }
 
   try {
-    const data = await workerGet(`/load?name=${encodeURIComponent(rosterName)}`);
-    const snapshot = JSON.parse(data);
+    const raw = await workerGet(`/load?name=${encodeURIComponent(rosterName)}`);
+    const snapshot = JSON.parse(raw);
 
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
@@ -439,7 +440,6 @@ function renderPlayersList() {
     container.appendChild(row);
   });
 }
-
 function renderStatsTable() {
   const tbody = $("statsTableBody");
   tbody.innerHTML = "";
@@ -710,8 +710,6 @@ function renderPlayerDetails(playerId) {
   `;
 }
 
-// --- Delete player ---------------------------------------------------------
-
 function deletePlayer(playerId) {
   const p = players.find((x) => x.id === playerId);
   if (!p) return;
@@ -739,7 +737,6 @@ function deletePlayer(playerId) {
   renderNeedsToPlay();
   $("playerDetails").innerHTML = "<p>No player selected.</p>";
 }
-
 // --- Rotation logic --------------------------------------------------------
 
 function generateNextRound() {
@@ -903,7 +900,7 @@ function undoLastRound() {
   renderNeedsToPlay();
 }
 
-// --- Results modal (wins/losses) ------------------------------------------
+// --- Results modal ---------------------------------------------------------
 
 let pendingResults = null;
 
@@ -1000,15 +997,15 @@ function saveResults() {
   winners.forEach((pid) => {
     const p = players.find((x) => x.id === pid);
     if (p) {
-      p.dailyWins += 1; // daily
-      p.wins += 1;      // season
+      p.dailyWins += 1;
+      p.wins += 1;
     }
   });
   losers.forEach((pid) => {
     const p = players.find((x) => x.id === pid);
     if (p) {
-      p.dailyLosses += 1; // daily
-      p.losses += 1;      // season
+      p.dailyLosses += 1;
+      p.losses += 1;
     }
   });
 
@@ -1107,7 +1104,7 @@ function initTheme() {
   }
 }
 
-function toggleTheme() {
+$("themeToggle").addEventListener("click", () => {
   const isDark = document.body.classList.contains("dark-mode");
   if (isDark) {
     document.body.classList.remove("dark-mode");
@@ -1120,110 +1117,76 @@ function toggleTheme() {
     $("themeIcon").textContent = "🌙";
     localStorage.setItem("pickleball_theme", "dark");
   }
-}
+});
 
-// --- Controls --------------------------------------------------------------
+// --- Event Listeners -------------------------------------------------------
 
-function randomizeOrder() {
-  const active = players.filter((p) => p.active && p.name.trim());
-  const inactive = players.filter((p) => !p.active || !p.name.trim());
-  for (let i = active.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [active[i], active[j]] = [active[j], active[i]];
-  }
-  const combined = [...active, ...inactive];
-  combined.forEach((p, idx) => {
-    p.id = idx + 1;
-  });
-  players = combined.sort((a, b) => a.id - b.id);
-  saveState();
-  renderPlayersList();
-  renderStatsTable();
-  renderSummary();
-  renderNeedsToPlay();
-}
-
-function resetSessionKeepNames() {
-  if (!confirm("Reset session stats (games, rest, daily wins/losses, partners, opponents) but keep names and season wins/losses?")) {
-    return;
-  }
+$("randomizeOrderBtn").addEventListener("click", generateNextRound);
+$("resetSessionBtn").addEventListener("click", () => {
   players.forEach((p) => {
     p.games = 0;
     p.rest = 0;
     p.dailyWins = 0;
     p.dailyLosses = 0;
-    p.partners = {};
-    p.opponents = {};
   });
   courts = [];
-  currentRoundId = 0;
-  historyStack = [];
-  saveState();
-  renderCourts();
-  renderStatsTable();
-  renderSummary();
-  renderNeedsToPlay();
-}
-
-function resetEverything() {
-  if (!confirm("Reset EVERYTHING (names, stats, wins, losses, history)?")) {
-    return;
-  }
-  localStorage.removeItem(STORAGE_KEY);
-  players = [];
-  courts = [];
   historyStack = [];
   currentRoundId = 0;
-  initPlayers();
   saveState();
   renderPlayersList();
   renderStatsTable();
   renderCourts();
   renderSummary();
   renderNeedsToPlay();
-  $("playerDetails").innerHTML = "<p>No player selected.</p>";
-}
-
-// --- Init ------------------------------------------------------------------
-
-window.addEventListener("DOMContentLoaded", () => {
-  initPlayers();
-  initTheme();
-  renderPlayersList();
-  renderStatsTable();
-  renderCourts();
-  renderSummary();
-  renderNeedsToPlay();
-  updateTimerDisplay();
-
-  refreshRosterSelect();
-  refreshCloudRosters();
-
-  $("themeToggle").addEventListener("click", toggleTheme);
-  $("nextRoundBtn").addEventListener("click", generateNextRound);
-  $("undoBtn").addEventListener("click", undoLastRound);
-  $("recordResultsBtn").addEventListener("click", openResultsModal);
-  $("closeResultsModal").addEventListener("click", closeResultsModal);
-  $("cancelResultsBtn").addEventListener("click", closeResultsModal);
-  $("saveResultsBtn").addEventListener("click", saveResults);
-
-  $("closeEditWLModal").addEventListener("click", closeEditWLModal);
-  $("cancelWLBtn").addEventListener("click", closeEditWLModal);
-  $("saveWLBtn").addEventListener("click", saveWL);
-
-  $("randomizeOrderBtn").addEventListener("click", randomizeOrder);
-  $("resetSessionBtn").addEventListener("click", resetSessionKeepNames);
-  $("resetAllBtn").addEventListener("click", resetEverything);
-
-  $("saveRosterBtn").addEventListener("click", saveCurrentRosterAs);
-  $("loadRosterFromSelectBtn").addEventListener("click", loadRosterFromSelect);
-
-  $("saveCloudRosterBtn").addEventListener("click", saveCurrentRosterToCloud);
-  $("loadCloudRosterBtn").addEventListener("click", loadSelectedCloudRoster);
-  $("deleteCloudRosterBtn").addEventListener("click", deleteSelectedCloudRoster);
-  $("refreshCloudRostersBtn").addEventListener("click", refreshCloudRosters);
-
-  $("startTimerBtn").addEventListener("click", startTimer);
-  $("pauseTimerBtn").addEventListener("click", pauseTimer);
-  $("resetTimerBtn").addEventListener("click", resetTimer);
 });
+
+$("resetAllBtn").addEventListener("click", () => {
+  if (!confirm("Reset EVERYTHING? Names, stats, history — all cleared.")) return;
+  localStorage.clear();
+  initPlayers();
+  renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+});
+
+$("nextRoundBtn").addEventListener("click", generateNextRound);
+$("undoBtn").addEventListener("click", undoLastRound);
+
+$("recordResultsBtn").addEventListener("click", openResultsModal);
+$("closeResultsModal").addEventListener("click", closeResultsModal);
+$("cancelResultsBtn").addEventListener("click", closeResultsModal);
+$("saveResultsBtn").addEventListener("click", saveResults);
+
+$("closeEditWLModal").addEventListener("click", closeEditWLModal);
+$("cancelWLBtn").addEventListener("click", closeEditWLModal);
+$("saveWLBtn").addEventListener("click", saveWL);
+
+$("startTimerBtn").addEventListener("click", startTimer);
+$("pauseTimerBtn").addEventListener("click", pauseTimer);
+$("resetTimerBtn").addEventListener("click", resetTimer);
+
+// Cloud roster buttons
+$("saveCloudRosterBtn").addEventListener("click", saveCurrentRosterToCloud);
+$("loadCloudRosterBtn").addEventListener("click", loadSelectedCloudRoster);
+$("deleteCloudRosterBtn").addEventListener("click", deleteSelectedCloudRoster);
+$("refreshCloudRostersBtn").addEventListener("click", refreshCloudRosters);
+
+// Local roster buttons
+$("saveRosterBtn").addEventListener("click", saveCurrentRosterAs);
+$("loadRosterFromSelectBtn").addEventListener("click", loadRosterFromSelect);
+
+// --- Initialize on load ----------------------------------------------------
+
+window.addEventListener("load", () => {
+  initPlayers();
+  renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+  refreshCloudRosters();
+  initTheme();
+});
+
