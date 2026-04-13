@@ -4,25 +4,8 @@ const WORKER_URL = "https://floral-silence-525b.mariyam-abdulkarim123.workers.de
 // Helper to call Worker endpoints
 async function workerGet(path) {
   const res = await fetch(`${WORKER_URL}${path}`);
-
-  let payload;
-  const contentType = res.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    payload = await res.json();
-  } else {
-    payload = await res.text();
-  }
-
-  if (!res.ok) {
-    const message =
-      payload?.error ||
-      payload?.message ||
-      `Worker GET failed: ${path}`;
-    throw new Error(message);
-  }
-
-  return payload;
+  if (!res.ok) throw new Error(`Worker GET failed: ${path}`);
+  return res.json();
 }
 
 async function workerPost(path, body) {
@@ -31,32 +14,14 @@ async function workerPost(path, body) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-
-  let payload;
-  const contentType = res.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    payload = await res.json();
-  } else {
-    payload = await res.text();
-  }
-
-  if (!res.ok) {
-    const message =
-      payload?.error ||
-      payload?.message ||
-      `Worker POST failed: ${path}`;
-    throw new Error(message);
-  }
-
-  return payload;
+  if (!res.ok) throw new Error(`Worker POST failed: ${path}`);
+  return res.json();
 }
 
 // --- Data model & persistence ----------------------------------------------
 
 const STORAGE_KEY = "pickleball_rotation_v1";
 const ROSTERS_KEY = "pickleball_rosters_v1"; // name -> players snapshot
-const THEME_KEY = "pickleball_theme";
 
 let players = [];
 let courts = [];
@@ -73,12 +38,12 @@ function initPlayers() {
       id: p.id ?? idx + 1,
       name: p.name || "",
       active: !!p.active,
-      games: p.games || 0,
-      rest: p.rest || 0,
-      wins: p.wins || 0,
-      losses: p.losses || 0,
-      dailyWins: p.dailyWins || 0,
-      dailyLosses: p.dailyLosses || 0,
+      games: p.games || 0,          // daily
+      rest: p.rest || 0,            // daily
+      wins: p.wins || 0,            // season
+      losses: p.losses || 0,        // season
+      dailyWins: p.dailyWins || 0,  // daily
+      dailyLosses: p.dailyLosses || 0, // daily
       partners: p.partners || {},
       opponents: p.opponents || {},
     }));
@@ -151,7 +116,7 @@ function refreshRosterSelect() {
   select.innerHTML = '<option value="">(No roster selected)</option>';
 
   Object.keys(rostersMap)
-    .sort((a, b) => a.localeCompare(b))
+    .sort()
     .forEach((name) => {
       const opt = document.createElement("option");
       opt.value = name;
@@ -262,7 +227,6 @@ function loadRosterFromSelect() {
 
   alert(`Roster "${rosterName}" loaded.`);
 }
-
 // --- Cloud rosters (via Cloudflare Worker) ---------------------------------
 
 async function refreshCloudRosters() {
@@ -273,32 +237,22 @@ async function refreshCloudRosters() {
 
   try {
     const list = await workerGet("/list");
-
-    if (!Array.isArray(list)) {
-      throw new Error("Invalid roster list returned from cloud.");
-    }
-
-    list
-      .sort((a, b) => a.localeCompare(b))
-      .forEach((name) => {
-        const clean = name.replace(/\.json$/i, "");
-        const opt = document.createElement("option");
-        opt.value = clean;
-        opt.textContent = clean;
-        select.appendChild(opt);
-      });
+    list.sort().forEach((name) => {
+      const clean = name.replace(".json", "");
+      const opt = document.createElement("option");
+      opt.value = clean;
+      opt.textContent = clean;
+      select.appendChild(opt);
+    });
   } catch (err) {
     console.error(err);
-    alert(`Failed to load cloud roster list: ${err.message}`);
+    alert("Failed to load cloud roster list.");
   }
 }
 
 async function saveCurrentRosterToCloud() {
   const defaultName = $("cloudRosterSelect")?.value || "";
-  const rosterName = prompt(
-    "Enter a name for this cloud roster:",
-    defaultName || "New Cloud Roster"
-  );
+  const rosterName = prompt("Enter a name for this cloud roster:", defaultName || "New Cloud Roster");
   if (!rosterName) return;
 
   const snapshot = players.map((p) => ({
@@ -324,7 +278,7 @@ async function saveCurrentRosterToCloud() {
     $("cloudRosterSelect").value = rosterName;
   } catch (err) {
     console.error(err);
-    alert(`Error saving roster to cloud: ${err.message}`);
+    alert("Error saving roster to cloud.");
   }
 }
 
@@ -343,11 +297,8 @@ async function loadSelectedCloudRoster() {
   }
 
   try {
-    const snapshot = await workerGet(`/load?name=${encodeURIComponent(rosterName)}`);
-
-    if (!Array.isArray(snapshot)) {
-      throw new Error("Invalid cloud roster format.");
-    }
+    const raw = await workerGet(`/load?name=${encodeURIComponent(rosterName)}`);
+    const snapshot = JSON.parse(raw);
 
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
@@ -394,7 +345,7 @@ async function loadSelectedCloudRoster() {
     alert(`Cloud roster "${rosterName}" loaded.`);
   } catch (err) {
     console.error(err);
-    alert(`Error loading cloud roster: ${err.message}`);
+    alert("Error loading cloud roster.");
   }
 }
 
@@ -418,7 +369,7 @@ async function deleteSelectedCloudRoster() {
     await refreshCloudRosters();
   } catch (err) {
     console.error(err);
-    alert(`Error deleting cloud roster: ${err.message}`);
+    alert("Error deleting cloud roster.");
   }
 }
 
@@ -489,7 +440,6 @@ function renderPlayersList() {
     container.appendChild(row);
   });
 }
-
 function renderStatsTable() {
   const tbody = $("statsTableBody");
   tbody.innerHTML = "";
@@ -781,3 +731,461 @@ function deletePlayer(playerId) {
 
   saveState();
   renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+  $("playerDetails").innerHTML = "<p>No player selected.</p>";
+}
+// --- Rotation logic --------------------------------------------------------
+
+function generateNextRound() {
+  const activePlayers = players.filter((p) => p.active && p.name.trim());
+  if (activePlayers.length < 4) {
+    alert("Need at least 4 active players with names to create a round.");
+    return;
+  }
+
+  const courtsCount = Math.min(3, Math.floor(activePlayers.length / 4));
+  if (courtsCount === 0) {
+    alert("Not enough players for a court.");
+    return;
+  }
+
+  const sorted = [...activePlayers].sort((a, b) => {
+    if (b.rest !== a.rest) return b.rest - a.rest;
+    if (a.games !== b.games) return a.games - b.games;
+    return a.id - b.id;
+  });
+
+  const playersThisRound = sorted.slice(0, courtsCount * 4);
+
+  const newCourts = [];
+  for (let c = 0; c < courtsCount; c++) {
+    const group = playersThisRound.slice(c * 4, c * 4 + 4);
+    const ids = group.map((p) => p.id);
+    const bestSplit = chooseBestTeamSplit(ids);
+    newCourts.push(bestSplit);
+  }
+
+  historyStack.push({
+    roundId: currentRoundId + 1,
+    players: JSON.parse(JSON.stringify(players)),
+    courts: JSON.parse(JSON.stringify(courts)),
+  });
+
+  const playingIds = newCourts.flatMap((c) => [...c.team1, ...c.team2]);
+  const playingSet = new Set(playingIds);
+
+  players.forEach((p) => {
+    if (playingSet.has(p.id)) {
+      p.games += 1;
+      p.rest = 0;
+    } else if (p.active && p.name.trim()) {
+      p.rest += 1;
+    }
+  });
+
+  newCourts.forEach((court) => {
+    const [a, b] = court.team1;
+    const [c, d] = court.team2;
+
+    addPartner(a, b);
+    addPartner(b, a);
+    addPartner(c, d);
+    addPartner(d, c);
+
+    [a, b].forEach((pid) => {
+      addOpponent(pid, c);
+      addOpponent(pid, d);
+    });
+    [c, d].forEach((pid) => {
+      addOpponent(pid, a);
+      addOpponent(pid, b);
+    });
+  });
+
+  courts = newCourts;
+  currentRoundId += 1;
+  saveState();
+  renderCourts();
+  renderStatsTable();
+  renderSummary();
+  renderNeedsToPlay();
+}
+
+function addPartner(pid, partnerId) {
+  const p = players.find((x) => x.id === pid);
+  if (!p) return;
+  p.partners[partnerId] = (p.partners[partnerId] || 0) + 1;
+}
+
+function addOpponent(pid, oppId) {
+  const p = players.find((x) => x.id === pid);
+  if (!p) return;
+  p.opponents[oppId] = (p.opponents[oppId] || 0) + 1;
+}
+
+function chooseBestTeamSplit(ids) {
+  const [p1, p2, p3, p4] = ids;
+  const splits = [
+    { team1: [p1, p2], team2: [p3, p4] },
+    { team1: [p1, p3], team2: [p2, p4] },
+    { team1: [p1, p4], team2: [p2, p3] },
+  ];
+
+  let best = splits[0];
+  let bestScore = Infinity;
+
+  splits.forEach((s) => {
+    const score = teamSplitPenalty(s.team1, s.team2);
+    if (score < bestScore) {
+      bestScore = score;
+      best = s;
+    }
+  });
+
+  return best;
+}
+
+function teamSplitPenalty(team1, team2) {
+  const [a, b] = team1;
+  const [c, d] = team2;
+
+  let penalty = 0;
+
+  const pa = players.find((x) => x.id === a);
+  const pb = players.find((x) => x.id === b);
+  const pc = players.find((x) => x.id === c);
+  const pd = players.find((x) => x.id === d);
+
+  const partnerWeight = 3;
+  const opponentWeight = 1;
+
+  penalty += (pa.partners[b] || 0) * partnerWeight;
+  penalty += (pb.partners[a] || 0) * partnerWeight;
+  penalty += (pc.partners[d] || 0) * partnerWeight;
+  penalty += (pd.partners[c] || 0) * partnerWeight;
+
+  [a, b].forEach((pid) => {
+    const p = players.find((x) => x.id === pid);
+    penalty += (p.opponents[c] || 0) * opponentWeight;
+    penalty += (p.opponents[d] || 0) * opponentWeight;
+  });
+
+  [c, d].forEach((pid) => {
+    const p = players.find((x) => x.id === pid);
+    penalty += (p.opponents[a] || 0) * opponentWeight;
+    penalty += (p.opponents[b] || 0) * opponentWeight;
+  });
+
+  return penalty;
+}
+
+// --- Undo ------------------------------------------------------------------
+
+function undoLastRound() {
+  if (historyStack.length === 0) {
+    alert("No previous round to undo.");
+    return;
+  }
+  const snapshot = historyStack.pop();
+  players = snapshot.players;
+  courts = snapshot.courts;
+  currentRoundId = snapshot.roundId - 1;
+  saveState();
+  renderCourts();
+  renderStatsTable();
+  renderSummary();
+  renderNeedsToPlay();
+}
+
+// --- Results modal ---------------------------------------------------------
+
+let pendingResults = null;
+
+function openResultsModal() {
+  if (!courts || courts.length === 0) {
+    alert("No current round to record results for.");
+    return;
+  }
+  pendingResults = {};
+  const body = $("resultsModalBody");
+  body.innerHTML = "";
+
+  courts.forEach((court, index) => {
+    const block = document.createElement("div");
+    block.className = "results-court-block";
+
+    const title = document.createElement("h4");
+    title.textContent = `Court ${index + 1}`;
+    block.appendChild(title);
+
+    const team1Option = document.createElement("div");
+    team1Option.className = "results-team-option";
+    const team1Radio = document.createElement("input");
+    team1Radio.type = "radio";
+    team1Radio.name = "court" + index;
+    team1Radio.value = "team1";
+    const team1Label = document.createElement("div");
+    team1Label.className = "results-team-label";
+    court.team1.forEach((pid) => {
+      const p = players.find((x) => x.id === pid);
+      const span = document.createElement("span");
+      span.textContent = `#${p.id} ${p.name || ""}`;
+      team1Label.appendChild(span);
+    });
+    team1Option.appendChild(team1Radio);
+    team1Option.appendChild(team1Label);
+
+    const team2Option = document.createElement("div");
+    team2Option.className = "results-team-option";
+    const team2Radio = document.createElement("input");
+    team2Radio.type = "radio";
+    team2Radio.name = "court" + index;
+    team2Radio.value = "team2";
+    const team2Label = document.createElement("div");
+    team2Label.className = "results-team-label";
+    court.team2.forEach((pid) => {
+      const p = players.find((x) => x.id === pid);
+      const span = document.createElement("span");
+      span.textContent = `#${p.id} ${p.name || ""}`;
+      team2Label.appendChild(span);
+    });
+    team2Option.appendChild(team2Radio);
+    team2Option.appendChild(team2Label);
+
+    block.appendChild(team1Option);
+    block.appendChild(team2Option);
+    body.appendChild(block);
+  });
+
+  $("resultsModal").classList.remove("hidden");
+}
+
+function closeResultsModal() {
+  $("resultsModal").classList.add("hidden");
+  pendingResults = null;
+}
+
+function saveResults() {
+  if (!courts || courts.length === 0) {
+    closeResultsModal();
+    return;
+  }
+
+  const winners = [];
+  const losers = [];
+
+  courts.forEach((court, index) => {
+    const radios = document.querySelectorAll(`input[name="court${index}"]`);
+    let winner = null;
+    radios.forEach((r) => {
+      if (r.checked) winner = r.value;
+    });
+    if (!winner) return;
+
+    if (winner === "team1") {
+      winners.push(...court.team1);
+      losers.push(...court.team2);
+    } else {
+      winners.push(...court.team2);
+      losers.push(...court.team1);
+    }
+  });
+
+  winners.forEach((pid) => {
+    const p = players.find((x) => x.id === pid);
+    if (p) {
+      p.dailyWins += 1;
+      p.wins += 1;
+    }
+  });
+  losers.forEach((pid) => {
+    const p = players.find((x) => x.id === pid);
+    if (p) {
+      p.dailyLosses += 1;
+      p.losses += 1;
+    }
+  });
+
+  saveState();
+  renderStatsTable();
+  renderSummary();
+  renderNeedsToPlay();
+  closeResultsModal();
+}
+
+// --- Edit Wins/Losses modal -----------------------------------------------
+
+let editWLPlayerId = null;
+
+function openEditWLModal(playerId) {
+  const p = players.find((x) => x.id === playerId);
+  if (!p) return;
+  editWLPlayerId = playerId;
+  $("editWLPlayerName").textContent = `#${p.id} ${p.name || "(empty)"}`;
+  $("editWinsInput").value = p.wins;
+  $("editLossesInput").value = p.losses;
+  $("editWLModal").classList.remove("hidden");
+}
+
+function closeEditWLModal() {
+  $("editWLModal").classList.add("hidden");
+  editWLPlayerId = null;
+}
+
+function saveWL() {
+  if (!editWLPlayerId) return;
+  const p = players.find((x) => x.id === editWLPlayerId);
+  if (!p) return;
+  const wins = parseInt($("editWinsInput").value, 10);
+  const losses = parseInt($("editLossesInput").value, 10);
+  p.wins = isNaN(wins) ? 0 : wins;
+  p.losses = isNaN(losses) ? 0 : losses;
+  saveState();
+  renderStatsTable();
+  renderSummary();
+  renderNeedsToPlay();
+  closeEditWLModal();
+}
+
+// --- Timer -----------------------------------------------------------------
+
+function updateTimerDisplay() {
+  const minutes = Math.floor(timerRemaining / 60);
+  const seconds = timerRemaining % 60;
+  $("timerDisplay").textContent =
+    String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+}
+
+function startTimer() {
+  if (timerInterval) return;
+  timerInterval = setInterval(() => {
+    timerRemaining -= 1;
+    if (timerRemaining <= 0) {
+      timerRemaining = 0;
+      clearInterval(timerInterval);
+      timerInterval = null;
+      updateTimerDisplay();
+      alert("Round time is up! Consider generating the next round.");
+      return;
+    }
+    updateTimerDisplay();
+    saveState();
+  }, 1000);
+}
+
+function pauseTimer() {
+  if (!timerInterval) return;
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function resetTimer() {
+  const minutes = parseInt($("timerDuration").value, 10);
+  timerRemaining = minutes * 60;
+  updateTimerDisplay();
+  saveState();
+}
+
+// --- Theme toggle ----------------------------------------------------------
+
+function initTheme() {
+  const saved = localStorage.getItem("pickleball_theme");
+  if (saved === "dark") {
+    document.body.classList.add("dark-mode");
+    document.body.classList.remove("light-mode");
+    $("themeIcon").textContent = "🌙";
+  } else {
+    document.body.classList.add("light-mode");
+    document.body.classList.remove("dark-mode");
+    $("themeIcon").textContent = "🌞";
+  }
+}
+
+$("themeToggle").addEventListener("click", () => {
+  const isDark = document.body.classList.contains("dark-mode");
+  if (isDark) {
+    document.body.classList.remove("dark-mode");
+    document.body.classList.add("light-mode");
+    $("themeIcon").textContent = "🌞";
+    localStorage.setItem("pickleball_theme", "light");
+  } else {
+    document.body.classList.remove("light-mode");
+    document.body.classList.add("dark-mode");
+    $("themeIcon").textContent = "🌙";
+    localStorage.setItem("pickleball_theme", "dark");
+  }
+});
+
+// --- Event Listeners -------------------------------------------------------
+
+$("randomizeOrderBtn").addEventListener("click", generateNextRound);
+$("resetSessionBtn").addEventListener("click", () => {
+  players.forEach((p) => {
+    p.games = 0;
+    p.rest = 0;
+    p.dailyWins = 0;
+    p.dailyLosses = 0;
+  });
+  courts = [];
+  historyStack = [];
+  currentRoundId = 0;
+  saveState();
+  renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+});
+
+$("resetAllBtn").addEventListener("click", () => {
+  if (!confirm("Reset EVERYTHING? Names, stats, history — all cleared.")) return;
+  localStorage.clear();
+  initPlayers();
+  renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+});
+
+$("nextRoundBtn").addEventListener("click", generateNextRound);
+$("undoBtn").addEventListener("click", undoLastRound);
+
+$("recordResultsBtn").addEventListener("click", openResultsModal);
+$("closeResultsModal").addEventListener("click", closeResultsModal);
+$("cancelResultsBtn").addEventListener("click", closeResultsModal);
+$("saveResultsBtn").addEventListener("click", saveResults);
+
+$("closeEditWLModal").addEventListener("click", closeEditWLModal);
+$("cancelWLBtn").addEventListener("click", closeEditWLModal);
+$("saveWLBtn").addEventListener("click", saveWL);
+
+$("startTimerBtn").addEventListener("click", startTimer);
+$("pauseTimerBtn").addEventListener("click", pauseTimer);
+$("resetTimerBtn").addEventListener("click", resetTimer);
+
+// Cloud roster buttons
+$("saveCloudRosterBtn").addEventListener("click", saveCurrentRosterToCloud);
+$("loadCloudRosterBtn").addEventListener("click", loadSelectedCloudRoster);
+$("deleteCloudRosterBtn").addEventListener("click", deleteSelectedCloudRoster);
+$("refreshCloudRostersBtn").addEventListener("click", refreshCloudRosters);
+
+// Local roster buttons
+$("saveRosterBtn").addEventListener("click", saveCurrentRosterAs);
+$("loadRosterFromSelectBtn").addEventListener("click", loadRosterFromSelect);
+
+// --- Initialize on load ----------------------------------------------------
+
+window.addEventListener("load", () => {
+  initPlayers();
+  renderPlayersList();
+  renderStatsTable();
+  renderCourts();
+  renderSummary();
+  renderNeedsToPlay();
+  refreshCloudRosters();
+  initTheme();
+});
